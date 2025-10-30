@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const LoginForm = () => {
+  console.log('LoginForm render');
   const [formData, setFormData] = useState({
     email: '',
     password: '',

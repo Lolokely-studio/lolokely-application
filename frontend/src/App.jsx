@@ -12,6 +12,7 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
+  console.log('AppRoutes render');
   return (
     <Routes>
       <Route path="/login" element={<LoginForm />} />
@@ -28,11 +29,13 @@ const AppRoutes = () => {
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<div style={{ padding: 24 }}>No route matched</div>} />
     </Routes>
   );
 };
 
 const App = () => {
+  console.log('App mounted');
   return (
     <AuthProvider>
       <Router>
