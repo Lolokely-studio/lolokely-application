@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogoutIcon } from '@heroicons/react/24/outline';
+import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -21,7 +21,7 @@ const Navbar = () => {
               onClick={logout}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
             >
-              <LogoutIcon className="h-5 w-5" />
+              <ArrowRightOnRectangleIcon className="h-5 w-5" />
               <span>Logout</span>
             </button>
           </div>
