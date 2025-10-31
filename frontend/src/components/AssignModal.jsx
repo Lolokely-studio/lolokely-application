@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import UserAvatar from './UserAvatar';
 
 const AssignModal = ({ title, users, currentAssignments, onSubmit, onCancel }) => {
   const [selectedUsers, setSelectedUsers] = useState(
-    currentAssignments.map(assignment => assignment.user_id)
+    currentAssignments.map(assignment => assignment.user_id || assignment.id)
   );
 
   const handleUserToggle = (userId) => {
@@ -41,7 +42,7 @@ const AssignModal = ({ title, users, currentAssignments, onSubmit, onCancel }) =
               {users.map((user) => (
                 <label
                   key={user.id}
-                  className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                  className="flex items-center space-x-3 p-2.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                 >
                   <input
                     type="checkbox"
@@ -49,10 +50,19 @@ const AssignModal = ({ title, users, currentAssignments, onSubmit, onCancel }) =
                     onChange={() => handleUserToggle(user.id)}
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-900">
-                    {user.first_name} {user.last_name}
-                  </span>
-                  <span className="text-xs text-gray-500">({user.email})</span>
+                  <UserAvatar
+                    user={user}
+                    size="md"
+                    className="flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900">
+                      {user.first_name} {user.last_name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {user.email}
+                    </div>
+                  </div>
                 </label>
               ))}
             </div>
