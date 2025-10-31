@@ -1,0 +1,13 @@
+backend/venv
+backend/backend.egg-info
+backend/__pycache__
+
+__pycache__
+*.pyc
+
+.env
+.vscode
+.idea
+.DS_Store
+
+frontend/node_modules
