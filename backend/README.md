@@ -15,12 +15,18 @@ A Flask-based REST API for task management similar to Monday.com.
    # Edit .env with your database credentials
    ```
 
-3. **Initialize database:**
-   ```bash
-   export FLASK_APP=app.py
-   flask db init
-   flask db migrate -m "Initial migration"
-   flask db upgrade
+3. **Configure database (Supabase Postgres):**
+   Set your `.env` with either a full connection string or discrete values:
+   ```env
+   # Full connection string (preferred)
+   DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+
+   # Or discrete values used by backend/db.py
+   USER=...
+   PASSWORD=...
+   HOST=...
+   PORT=5432
+   DBNAME=...
    ```
 
 4. **Run the application:**
