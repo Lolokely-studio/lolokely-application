@@ -15,6 +15,8 @@ const Dashboard = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   useEffect(() => {
     loadData();
@@ -115,7 +117,7 @@ const Dashboard = () => {
     }
   };
 
-  // Filter tasks and subtasks based on search query and user filter
+  // Filter tasks and subtasks based on search query, user, priority, and status filters
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
 
@@ -125,6 +127,16 @@ const Dashboard = () => {
         const assignedUserIds = task.assignments?.map(a => a.user_id || a.id) || [];
         return assignedUserIds.includes(selectedUserId);
       });
+    }
+
+    // Filter by priority
+    if (selectedPriority) {
+      filtered = filtered.filter(task => task.priority === selectedPriority);
+    }
+
+    // Filter by status
+    if (selectedStatus) {
+      filtered = filtered.filter(task => task.status === selectedStatus);
     }
 
     // Filter by search query
@@ -159,7 +171,7 @@ const Dashboard = () => {
     }
 
     return filtered;
-  }, [tasks, searchQuery, selectedUserId]);
+  }, [tasks, searchQuery, selectedUserId, selectedPriority, selectedStatus]);
 
   if (loading) {
     return (
@@ -205,26 +217,64 @@ const Dashboard = () => {
                 )}
               </div>
               
-              <div className="relative flex-shrink-0">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FunnelIcon className="h-5 w-5 text-gray-400" />
+              <div className="flex flex-wrap gap-3 flex-1">
+                <div className="relative flex-shrink-0">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FunnelIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="block w-full sm:w-40 pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="">All Users</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.first_name} {user.last_name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="block w-full sm:w-48 pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
-                >
-                  <option value="">All Users</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.first_name} {user.last_name}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+
+                <div className="relative flex-shrink-0">
+                  <select
+                    value={selectedPriority}
+                    onChange={(e) => setSelectedPriority(e.target.value)}
+                    className="block w-full sm:w-32 pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="">All Priorities</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="relative flex-shrink-0">
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="block w-full sm:w-40 pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="">All Status</option>
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -237,7 +287,7 @@ const Dashboard = () => {
             </button>
           </div>
           
-          {(searchQuery || selectedUserId) && (
+          {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
             <div className="flex items-center gap-2 flex-wrap">
               {searchQuery && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -261,6 +311,28 @@ const Dashboard = () => {
                   </button>
                 </span>
               )}
+              {selectedPriority && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Priority: {selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1)}
+                  <button
+                    onClick={() => setSelectedPriority('')}
+                    className="ml-2 hover:text-orange-600"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {selectedStatus && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Status: {selectedStatus === 'in_progress' ? 'In Progress' : selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
+                  <button
+                    onClick={() => setSelectedStatus('')}
+                    className="ml-2 hover:text-green-600"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -268,19 +340,14 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="space-y-6">
-              {(searchQuery || selectedUserId) && filteredTasks.length === 0 ? (
+              {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && filteredTasks.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-gray-400 text-6xl mb-4">🔍</div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     No tasks found
                   </h3>
                   <p className="text-gray-500">
-                    {searchQuery && selectedUserId 
-                      ? `No tasks match your search and filter criteria.`
-                      : searchQuery
-                      ? `No tasks or subtasks match "${searchQuery}"`
-                      : `No tasks assigned to selected user.`
-                    }
+                    No tasks match your filter criteria.
                   </p>
                 </div>
               ) : filteredTasks.length === 0 ? (
@@ -295,11 +362,13 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <>
-                  {(searchQuery || selectedUserId) && (
+                  {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
                     <div className="text-sm text-gray-600 mb-2">
                       Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
                       {searchQuery && ` matching "${searchQuery}"`}
                       {selectedUserId && ` assigned to ${users.find(u => u.id === selectedUserId)?.first_name} ${users.find(u => u.id === selectedUserId)?.last_name}`}
+                      {selectedPriority && ` with ${selectedPriority} priority`}
+                      {selectedStatus && ` with ${selectedStatus === 'in_progress' ? 'in progress' : selectedStatus} status`}
                     </div>
                   )}
                   {filteredTasks.map((task) => (

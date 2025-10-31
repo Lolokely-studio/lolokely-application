@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 const TaskForm = ({ task, onSubmit, onCancel }) => {
@@ -18,6 +18,14 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
     }));
   };
 
+  useEffect(() => {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = {
@@ -27,9 +35,21 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
     onSubmit(submitData);
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div 
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
             {task ? 'Edit Task' : 'Create New Task'}

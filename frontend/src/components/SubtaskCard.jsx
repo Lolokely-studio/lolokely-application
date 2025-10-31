@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import AssignModal from './AssignModal';
 import UserAvatar from './UserAvatar';
+import SubtaskForm from './SubtaskForm';
 
 const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
   const [showEditForm, setShowEditForm] = useState(false);
@@ -120,80 +121,14 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
       </div>
 
       {showEditForm && (
-        <div className="mt-3 p-3 bg-white rounded border">
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-              title: formData.get('title'),
-              description: formData.get('description'),
-              status: formData.get('status'),
-              priority: formData.get('priority'),
-              due_date: formData.get('due_date') ? new Date(formData.get('due_date')).toISOString() : null,
-            };
-            onUpdate(subtask.id, data);
+        <SubtaskForm
+          subtask={subtask}
+          onSubmit={(subtaskData) => {
+            onUpdate(subtask.id, subtaskData);
             setShowEditForm(false);
-          }}>
-            <div className="space-y-2">
-              <input
-                type="text"
-                name="title"
-                defaultValue={subtask.title}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Subtask title"
-              />
-              <textarea
-                name="description"
-                defaultValue={subtask.description}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Description"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  name="status"
-                  defaultValue={subtask.status}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-                <select
-                  name="priority"
-                  defaultValue={subtask.priority}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <input
-                type="date"
-                name="due_date"
-                defaultValue={subtask.due_date ? new Date(subtask.due_date).toISOString().split('T')[0] : ''}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditForm(false)}
-                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1 text-sm bg-primary-600 text-white rounded hover:bg-primary-700"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+          }}
+          onCancel={() => setShowEditForm(false)}
+        />
       )}
 
       {showAssignModal && (
