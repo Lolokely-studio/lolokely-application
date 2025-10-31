@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
-const SubtaskForm = ({ onSubmit, onCancel }) => {
+const SubtaskForm = ({ subtask, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    status: 'todo',
-    priority: 'medium',
-    due_date: '',
+    title: subtask?.title || '',
+    description: subtask?.description || '',
+    status: subtask?.status || 'todo',
+    priority: subtask?.priority || 'medium',
+    due_date: subtask?.due_date ? new Date(subtask.due_date).toISOString().split('T')[0] : '',
   });
 
   const handleChange = (e) => {
@@ -18,6 +18,14 @@ const SubtaskForm = ({ onSubmit, onCancel }) => {
     }));
   };
 
+  useEffect(() => {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = {
@@ -27,12 +35,24 @@ const SubtaskForm = ({ onSubmit, onCancel }) => {
     onSubmit(submitData);
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div 
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
-            Create New Subtask
+            {subtask ? 'Edit Subtask' : 'Create New Subtask'}
           </h2>
           <button
             onClick={onCancel}
@@ -136,7 +156,7 @@ const SubtaskForm = ({ onSubmit, onCancel }) => {
               type="submit"
               className="btn-primary"
             >
-              Create Subtask
+              {subtask ? 'Update Subtask' : 'Create Subtask'}
             </button>
           </div>
         </form>
