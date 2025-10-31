@@ -4,6 +4,7 @@ import SubtaskCard from './SubtaskCard';
 import TaskForm from './TaskForm';
 import SubtaskForm from './SubtaskForm';
 import AssignModal from './AssignModal';
+import UserAvatar from './UserAvatar';
 
 const TaskCard = ({
   task,
@@ -101,15 +102,14 @@ const TaskCard = ({
 
           {task.assignments && task.assignments.length > 0 && (
             <div className="mb-3">
-              <span className="text-sm text-gray-500">Assigned to:</span>
-              <div className="flex flex-wrap gap-1 mt-1">
+              <span className="text-sm text-gray-500 mb-2 block">Assigned to:</span>
+              <div className="flex flex-wrap gap-2 items-center">
                 {task.assignments.map((assignment) => (
-                  <span
-                    key={assignment.id}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                  >
-                    {assignment.user?.first_name} {assignment.user?.last_name}
-                  </span>
+                  <UserAvatar
+                    key={assignment.user_id || assignment.id}
+                    user={assignment}
+                    size="md"
+                  />
                 ))}
               </div>
             </div>

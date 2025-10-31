@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import AssignModal from './AssignModal';
+import UserAvatar from './UserAvatar';
 
 const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
   const [showEditForm, setShowEditForm] = useState(false);
@@ -79,14 +80,14 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
 
           {subtask.assignments && subtask.assignments.length > 0 && (
             <div className="mb-2">
-              <div className="flex flex-wrap gap-1">
+              <span className="text-xs text-gray-500 mb-1 block">Assigned to:</span>
+              <div className="flex flex-wrap gap-1.5 items-center">
                 {subtask.assignments.map((assignment) => (
-                  <span
-                    key={assignment.id}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                  >
-                    {assignment.user?.first_name} {assignment.user?.last_name}
-                  </span>
+                  <UserAvatar
+                    key={assignment.user_id || assignment.id}
+                    user={assignment}
+                    size="sm"
+                  />
                 ))}
               </div>
             </div>
