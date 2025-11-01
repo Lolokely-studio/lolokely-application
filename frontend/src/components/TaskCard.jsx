@@ -24,26 +24,26 @@ const TaskCard = ({
   const getStatusColor = (status) => {
     switch (status) {
       case 'todo':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
       case 'in_progress':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-200';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary-500/20 text-primary-700 dark:text-primary-100';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary-500/15 text-primary-700 dark:text-primary-200';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-200';
       case 'high':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-500/20 text-rose-700 dark:text-rose-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
     }
   };
 
@@ -57,18 +57,18 @@ const TaskCard = ({
 
   return (
     <div className="card">
-      <div className="flex items-start justify-between mb-4">
+      <div className="mb-4 flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             {task.title}
           </h3>
           {task.description && (
-            <p className="text-gray-600 mb-3">{task.description}</p>
+            <p className="mb-3 text-muted">{task.description}</p>
           )}
           
-          <div className="flex items-center space-x-4 mb-3">
+          <div className="mb-3 flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Status:</span>
+              <span className="text-sm text-muted">Status:</span>
               <select
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
@@ -81,7 +81,7 @@ const TaskCard = ({
             </div>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Priority:</span>
+              <span className="text-sm text-muted">Priority:</span>
               <select
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value)}
@@ -95,15 +95,15 @@ const TaskCard = ({
           </div>
 
           {task.due_date && (
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="mb-3 text-sm text-muted">
               Due: {new Date(task.due_date).toLocaleDateString()}
             </p>
           )}
 
           {task.assignments && task.assignments.length > 0 && (
             <div className="mb-3">
-              <span className="text-sm text-gray-500 mb-2 block">Assigned to:</span>
-              <div className="flex flex-wrap gap-2 items-center">
+              <span className="mb-2 block text-sm text-muted">Assigned to:</span>
+              <div className="flex flex-wrap items-center gap-2">
                 {task.assignments.map((assignment) => (
                   <UserAvatar
                     key={assignment.user_id || assignment.id}
@@ -119,21 +119,21 @@ const TaskCard = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowAssignModal(true)}
-            className="p-2 text-gray-400 hover:text-gray-600"
+            className="rounded-xl p-2 text-muted transition hover:text-foreground"
             title="Assign task"
           >
             <UserPlusIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => setShowEditForm(true)}
-            className="p-2 text-gray-400 hover:text-gray-600"
+            className="rounded-xl p-2 text-muted transition hover:text-foreground"
             title="Edit task"
           >
             <PencilIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => onDelete(task.id)}
-            className="p-2 text-gray-400 hover:text-red-600"
+            className="rounded-xl p-2 text-muted transition hover:text-rose-500"
             title="Delete task"
           >
             <TrashIcon className="h-5 w-5" />
@@ -141,12 +141,12 @@ const TaskCard = ({
         </div>
       </div>
 
-      <div className="border-t pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-900">Subtasks</h4>
+      <div className="divider-soft border-t pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="text-sm font-medium text-foreground">Subtasks</h4>
           <button
             onClick={() => setShowSubtaskForm(true)}
-            className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700"
+            className="flex items-center space-x-1 text-sm font-medium text-primary-600 transition hover:text-primary-700"
           >
             <PlusIcon className="h-4 w-4" />
             <span>Add Subtask</span>
@@ -166,7 +166,7 @@ const TaskCard = ({
               />
             ))
           ) : (
-            <p className="text-sm text-gray-500 italic">No subtasks yet</p>
+            <p className="text-sm italic text-muted">No subtasks yet</p>
           )}
         </div>
       </div>

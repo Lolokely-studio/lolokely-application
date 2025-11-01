@@ -11,26 +11,26 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'todo':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
       case 'in_progress':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-200';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary-500/20 text-primary-700 dark:text-primary-100';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary-500/15 text-primary-700 dark:text-primary-200';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-200';
       case 'high':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-500/20 text-rose-700 dark:text-rose-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-200';
     }
   };
 
@@ -43,15 +43,15 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-      <div className="flex items-start justify-between mb-3">
+    <div className="rounded-2xl border divider-soft bg-surface p-4">
+      <div className="mb-3 flex items-start justify-between">
         <div className="flex-1">
-          <h4 className="font-medium text-gray-900 mb-1">{subtask.title}</h4>
+          <h4 className="mb-1 font-medium text-foreground">{subtask.title}</h4>
           {subtask.description && (
-            <p className="text-sm text-gray-600 mb-2">{subtask.description}</p>
+            <p className="mb-2 text-sm text-muted">{subtask.description}</p>
           )}
           
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="mb-2 flex items-center space-x-3">
             <select
               value={subtask.status}
               onChange={(e) => handleStatusChange(e.target.value)}
@@ -74,15 +74,15 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
           </div>
 
           {subtask.due_date && (
-            <p className="text-xs text-gray-500 mb-2">
+            <p className="mb-2 text-xs text-muted">
               Due: {new Date(subtask.due_date).toLocaleDateString()}
             </p>
           )}
 
           {subtask.assignments && subtask.assignments.length > 0 && (
             <div className="mb-2">
-              <span className="text-xs text-gray-500 mb-1 block">Assigned to:</span>
-              <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="mb-1 block text-xs text-muted">Assigned to:</span>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {subtask.assignments.map((assignment) => (
                   <UserAvatar
                     key={assignment.user_id || assignment.id}
@@ -98,21 +98,21 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
         <div className="flex items-center space-x-1">
           <button
             onClick={() => setShowAssignModal(true)}
-            className="p-1 text-gray-400 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-muted transition hover:text-foreground"
             title="Assign subtask"
           >
             <UserPlusIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => setShowEditForm(true)}
-            className="p-1 text-gray-400 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-muted transition hover:text-foreground"
             title="Edit subtask"
           >
             <PencilIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => onDelete(subtask.id)}
-            className="p-1 text-gray-400 hover:text-red-600"
+            className="rounded-lg p-1.5 text-muted transition hover:text-rose-500"
             title="Delete subtask"
           >
             <TrashIcon className="h-4 w-4" />
