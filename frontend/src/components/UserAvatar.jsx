@@ -37,12 +37,12 @@ const UserAvatar = ({ user, size = 'md', className = '' }) => {
         className={`
           ${sizeClasses[size]} 
           rounded-full 
-          bg-gradient-to-br from-blue-500 to-purple-600 
+          bg-gradient-to-br from-primary-500 to-emerald-700 
           text-white 
           font-semibold 
           flex items-center justify-center
           cursor-pointer
-          border-2 border-white
+          border-2 border-primary-500/30
           shadow-sm
           hover:shadow-md
           transition-shadow
@@ -60,7 +60,7 @@ const UserAvatar = ({ user, size = 'md', className = '' }) => {
             ${tooltipSizeClasses[size]}
             left-1/2 
             -translate-x-1/2
-            bg-gray-900 
+            bg-slate-900/95 
             text-white 
             rounded-md 
             shadow-lg
@@ -72,11 +72,11 @@ const UserAvatar = ({ user, size = 'md', className = '' }) => {
         >
           <div className="font-medium">{name}</div>
           {email && (
-            <div className="text-xs text-gray-300 mt-0.5">{email}</div>
+            <div className="mt-0.5 text-xs text-emerald-100">{email}</div>
           )}
           {/* Tooltip arrow */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-            <div className="w-2 h-2 bg-gray-900 rotate-45"></div>
+            <div className="h-2 w-2 rotate-45 bg-slate-900/95"></div>
           </div>
         </div>
       )}

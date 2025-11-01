@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import SubtaskCard from './SubtaskCard';
 import TaskForm from './TaskForm';
 import SubtaskForm from './SubtaskForm';
 import AssignModal from './AssignModal';
 import UserAvatar from './UserAvatar';
+import { useTheme } from '../contexts/ThemeContext';
 
 const TaskCard = ({
   task,
@@ -17,34 +18,65 @@ const TaskCard = ({
   onAssignTask,
   onAssignSubtask,
 }) => {
+  const { theme } = useTheme();
   const [showEditForm, setShowEditForm] = useState(false);
   const [showSubtaskForm, setShowSubtaskForm] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'todo':
-        return 'bg-gray-100 text-gray-800';
-      case 'in_progress':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  // ✅ Status styles with theme support
+  const statusOptionStyles = useMemo(
+    () => ({
+      todo: {
+        light: { backgroundColor: '#E2E8F0', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(148, 163, 184, 0.25)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      in_progress: {
+        light: { backgroundColor: '#FDE68A', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(251, 191, 36, 0.2)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      completed: {
+        light: { backgroundColor: '#BBF7D0', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(16, 185, 129, 0.22)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      default: {
+        light: { backgroundColor: '#E2E8F0', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(148, 163, 184, 0.25)', color: '#F8FAFC', fontWeight: 600 }
+      }
+    }),
+    []
+  );
+
+  // ✅ Priority styles with theme support
+  const priorityOptionStyles = useMemo(
+    () => ({
+      low: {
+        light: { backgroundColor: '#BBF7D0', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(16, 185, 129, 0.22)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      medium: {
+        light: { backgroundColor: '#FDE68A', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(251, 191, 36, 0.2)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      high: {
+        light: { backgroundColor: '#FBCFE8', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(244, 114, 182, 0.25)', color: '#F8FAFC', fontWeight: 600 }
+      },
+      default: {
+        light: { backgroundColor: '#E2E8F0', color: '#111827', fontWeight: 600 },
+        dark: { backgroundColor: 'rgba(148, 163, 184, 0.25)', color: '#F8FAFC', fontWeight: 600 }
+      }
+    }),
+    []
+  );
+
+  const resolveStatusOptionStyle = (value) => {
+    const palette = statusOptionStyles[value] || statusOptionStyles.default;
+    return theme === 'dark' ? palette.dark : palette.light;
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const resolvePriorityOptionStyle = (value) => {
+    const palette = priorityOptionStyles[value] || priorityOptionStyles.default;
+    return theme === 'dark' ? palette.dark : palette.light;
   };
 
   const handleStatusChange = (newStatus) => {
@@ -57,53 +89,59 @@ const TaskCard = ({
 
   return (
     <div className="card">
-      <div className="flex items-start justify-between mb-4">
+      <div className="mb-4 flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             {task.title}
           </h3>
+
           {task.description && (
-            <p className="text-gray-600 mb-3">{task.description}</p>
+            <p className="mb-3 text-muted">{task.description}</p>
           )}
-          
-          <div className="flex items-center space-x-4 mb-3">
+
+          {/* ✅ STATUS + PRIORITY dark mode fix */}
+          <div className="mb-3 flex items-center space-x-4">
+            {/* STATUS */}
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Status:</span>
+              <span className="text-sm text-muted">Status:</span>
               <select
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}
+                style={resolveStatusOptionStyle(task.status)}
+                className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
+                <option value="todo" style={resolveStatusOptionStyle('todo')}>To Do</option>
+                <option value="in_progress" style={resolveStatusOptionStyle('in_progress')}>In Progress</option>
+                <option value="completed" style={resolveStatusOptionStyle('completed')}>Completed</option>
               </select>
             </div>
-            
+
+            {/* PRIORITY */}
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Priority:</span>
+              <span className="text-sm text-muted">Priority:</span>
               <select
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value)}
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}
+                style={resolvePriorityOptionStyle(task.priority)}
+                className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low" style={resolvePriorityOptionStyle('low')}>Low</option>
+                <option value="medium" style={resolvePriorityOptionStyle('medium')}>Medium</option>
+                <option value="high" style={resolvePriorityOptionStyle('high')}>High</option>
               </select>
             </div>
           </div>
 
           {task.due_date && (
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="mb-3 text-sm text-muted">
               Due: {new Date(task.due_date).toLocaleDateString()}
             </p>
           )}
 
-          {task.assignments && task.assignments.length > 0 && (
+          {task.assignments?.length > 0 && (
             <div className="mb-3">
-              <span className="text-sm text-gray-500 mb-2 block">Assigned to:</span>
-              <div className="flex flex-wrap gap-2 items-center">
+              <span className="mb-2 block text-sm text-muted">Assigned to:</span>
+              <div className="flex flex-wrap items-center gap-2">
                 {task.assignments.map((assignment) => (
                   <UserAvatar
                     key={assignment.user_id || assignment.id}
@@ -119,21 +157,23 @@ const TaskCard = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowAssignModal(true)}
-            className="p-2 text-gray-400 hover:text-gray-600"
+            className="rounded-xl p-2 text-muted transition hover:text-foreground"
             title="Assign task"
           >
             <UserPlusIcon className="h-5 w-5" />
           </button>
+
           <button
             onClick={() => setShowEditForm(true)}
-            className="p-2 text-gray-400 hover:text-gray-600"
+            className="rounded-xl p-2 text-muted transition hover:text-foreground"
             title="Edit task"
           >
             <PencilIcon className="h-5 w-5" />
           </button>
+
           <button
             onClick={() => onDelete(task.id)}
-            className="p-2 text-gray-400 hover:text-red-600"
+            className="rounded-xl p-2 text-muted transition hover:text-rose-500"
             title="Delete task"
           >
             <TrashIcon className="h-5 w-5" />
@@ -141,12 +181,13 @@ const TaskCard = ({
         </div>
       </div>
 
-      <div className="border-t pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-900">Subtasks</h4>
+      {/* SUBTASKS */}
+      <div className="divider-soft border-t pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="text-sm font-medium text-foreground">Subtasks</h4>
           <button
             onClick={() => setShowSubtaskForm(true)}
-            className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700"
+            className="flex items-center space-x-1 text-sm font-medium text-primary-600 transition hover:text-primary-700"
           >
             <PlusIcon className="h-4 w-4" />
             <span>Add Subtask</span>
@@ -154,7 +195,7 @@ const TaskCard = ({
         </div>
 
         <div className="space-y-3">
-          {task.subtasks && task.subtasks.length > 0 ? (
+          {task.subtasks?.length > 0 ? (
             task.subtasks.map((subtask) => (
               <SubtaskCard
                 key={subtask.id}
@@ -166,11 +207,12 @@ const TaskCard = ({
               />
             ))
           ) : (
-            <p className="text-sm text-gray-500 italic">No subtasks yet</p>
+            <p className="text-sm italic text-muted">No subtasks yet</p>
           )}
         </div>
       </div>
 
+      {/* EDIT TASK */}
       {showEditForm && (
         <TaskForm
           task={task}
@@ -182,6 +224,7 @@ const TaskCard = ({
         />
       )}
 
+      {/* NEW SUBTASK */}
       {showSubtaskForm && (
         <SubtaskForm
           onSubmit={(subtaskData) => {
@@ -192,6 +235,7 @@ const TaskCard = ({
         />
       )}
 
+      {/* ASSIGN TASK */}
       {showAssignModal && (
         <AssignModal
           title="Assign Task"

@@ -175,20 +175,20 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-20 w-20 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="relative z-10 min-h-screen pb-16">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-semibold text-foreground">
             Welcome back, {user?.first_name}!
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-muted">
             Manage your team's tasks and stay organized.
           </p>
         </div>
@@ -196,46 +196,47 @@ const Dashboard = () => {
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
-              <div className="relative flex-1 max-w-md w-full">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              <div className="relative w-full flex-1 max-w-md">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-primary-500/70" />
                 </div>
                 <input
                   type="text"
                   placeholder="Search tasks or subtasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  className="input-field !pl-11 !pr-12 !py-3 text-sm"
                 />
                 {searchQuery && (
                   <button
+                    type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-muted transition hover:text-foreground"
                   >
-                    <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                 )}
               </div>
               
               <div className="flex flex-wrap gap-3 flex-1">
                 <div className="relative flex-shrink-0">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FunnelIcon className="h-5 w-5 text-gray-400" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <FunnelIcon className="h-5 w-5 text-primary-500/70" />
                   </div>
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="block w-full sm:w-40 pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                    className="input-field sm:w-40 appearance-none !pl-11 !pr-12 text-sm cursor-pointer"
                   >
-                    <option value="">All Users</option>
+                    <option value="">All users</option>
                     {users.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.first_name} {user.last_name}
                       </option>
                     ))}
                   </select>
-                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -245,15 +246,15 @@ const Dashboard = () => {
                   <select
                     value={selectedPriority}
                     onChange={(e) => setSelectedPriority(e.target.value)}
-                    className="block w-full sm:w-32 pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                    className="input-field sm:w-32 appearance-none !pr-12 text-sm cursor-pointer"
                   >
-                    <option value="">All Priorities</option>
+                    <option value="">All priorities</option>
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
                   </select>
-                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -263,15 +264,15 @@ const Dashboard = () => {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="block w-full sm:w-40 pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm appearance-none cursor-pointer"
+                    className="input-field sm:w-40 appearance-none !pr-12 text-sm cursor-pointer"
                   >
-                    <option value="">All Status</option>
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
+                    <option value="">All status</option>
+                    <option value="todo">To do</option>
+                    <option value="in_progress">In progress</option>
                     <option value="completed">Completed</option>
                   </select>
-                  <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -288,46 +289,50 @@ const Dashboard = () => {
           </div>
           
           {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               {searchQuery && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="chip">
                   Search: "{searchQuery}"
                   <button
+                    type="button"
                     onClick={() => setSearchQuery('')}
-                    className="ml-2 hover:text-blue-600"
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
                 </span>
               )}
               {selectedUserId && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="chip">
                   User: {users.find(u => u.id === selectedUserId)?.first_name} {users.find(u => u.id === selectedUserId)?.last_name}
                   <button
+                    type="button"
                     onClick={() => setSelectedUserId('')}
-                    className="ml-2 hover:text-purple-600"
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
                 </span>
               )}
               {selectedPriority && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                <span className="chip">
                   Priority: {selectedPriority.charAt(0).toUpperCase() + selectedPriority.slice(1)}
                   <button
+                    type="button"
                     onClick={() => setSelectedPriority('')}
-                    className="ml-2 hover:text-orange-600"
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
                 </span>
               )}
               {selectedStatus && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Status: {selectedStatus === 'in_progress' ? 'In Progress' : selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
+                <span className="chip">
+                  Status: {selectedStatus === 'in_progress' ? 'In progress' : selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
                   <button
+                    type="button"
                     onClick={() => setSelectedStatus('')}
-                    className="ml-2 hover:text-green-600"
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
@@ -341,29 +346,29 @@ const Dashboard = () => {
           <div className="lg:col-span-2">
             <div className="space-y-6">
               {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && filteredTasks.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <div className="py-12 text-center">
+                  <div className="mb-4 text-6xl text-primary-500/60">🔍</div>
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
                     No tasks found
                   </h3>
-                  <p className="text-gray-500">
-                    No tasks match your filter criteria.
+                  <p className="text-muted">
+                    No tasks match your current filters. Try adjusting them for more results.
                   </p>
                 </div>
               ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 text-6xl mb-4">📋</div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <div className="py-12 text-center">
+                  <div className="mb-4 text-6xl text-primary-500/60">📋</div>
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
                     No tasks yet
                   </h3>
-                  <p className="text-gray-500">
+                  <p className="text-muted">
                     Create your first task to get started.
                   </p>
                 </div>
               ) : (
                 <>
                   {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
-                    <div className="text-sm text-gray-600 mb-2">
+                    <div className="mb-2 text-sm text-muted">
                       Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
                       {searchQuery && ` matching "${searchQuery}"`}
                       {selectedUserId && ` assigned to ${users.find(u => u.id === selectedUserId)?.first_name} ${users.find(u => u.id === selectedUserId)?.last_name}`}

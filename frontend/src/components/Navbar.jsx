@@ -1,30 +1,54 @@
 import React from 'react';
+import { LogOut, MoonStar, SunMedium } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">Lolokely Admin</h1>
+    <nav className="glass-nav sticky top-0 z-40">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
+            <span className="text-lg font-semibold">LK</span>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">
-              Welcome, {user?.first_name} {user?.last_name}
+          <div className="leading-tight">
+            <h1 className="text-lg font-semibold text-foreground">Lolokely Admin</h1>
+            <p className="text-xs text-muted">Green workflow dashboard</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'dark' ? (
+              <SunMedium className="h-5 w-5" />
+            ) : (
+              <MoonStar className="h-5 w-5" />
+            )}
+          </button>
+
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-sm font-medium text-foreground">
+              {user?.first_name} {user?.last_name}
             </span>
-            <button
-              onClick={logout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-            >
-              <ArrowRightOnRectangleIcon className="h-5 w-5" />
-              <span>Logout</span>
-            </button>
+            <span className="text-xs text-muted">Welcome back</span>
           </div>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-xl border border-primary-500/25 bg-primary-500/15 px-4 py-2 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
     </nav>

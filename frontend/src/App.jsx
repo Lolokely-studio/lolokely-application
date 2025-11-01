@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
@@ -47,11 +48,13 @@ const AppRoutes = () => {
 const App = () => {
   console.log('App mounted');
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 
