@@ -9,6 +9,7 @@ const Jobs = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedJob, setSelectedJob] = useState(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -89,6 +90,32 @@ const Jobs = () => {
       day: 'numeric',
     });
   };
+
+  const handleJobClick = (job) => {
+    setSelectedJob(job);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedJob(null);
+  };
+
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      handleCloseModal();
+    }
+  };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (selectedJob) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedJob]);
 
   if (loading) {
     return (
@@ -190,7 +217,10 @@ const Jobs = () => {
                             />
                           )}
                           <div>
-                            <h3 className="text-xl font-semibold text-foreground">
+                            <h3 
+                              onClick={() => handleJobClick(job)}
+                              className="text-xl font-semibold text-foreground cursor-pointer hover:text-primary-600 transition-colors duration-200"
+                            >
                               {job.title || 'Untitled Job'}
                             </h3>
                             <p className="text-sm text-muted">
@@ -315,6 +345,149 @@ const Jobs = () => {
           </div>
         )}
       </div>
+
+      {/* Job Details Modal */}
+      {selectedJob && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+          onClick={handleBackdropClick}
+        >
+          <div
+            className="glass-panel mx-4 w-full max-w-3xl max-h-[90vh] overflow-y-auto px-6 py-6 sm:px-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-foreground">Job Details</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-muted transition hover:text-foreground"
+                aria-label="Close modal"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="flex items-start gap-4">
+                {selectedJob.company_logo && (
+                  <img
+                    src={selectedJob.company_logo}
+                    alt={selectedJob.company_name || 'Company logo'}
+                    className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">
+                    {selectedJob.title || 'Untitled Job'}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                    {selectedJob.company_name && (
+                      <span className="font-medium text-foreground">{selectedJob.company_name}</span>
+                    )}
+                    {selectedJob.location && <span>• {selectedJob.location}</span>}
+                    {selectedJob.remote && <span>• Remote</span>}
+                    {selectedJob.source && (
+                      <span className="ml-auto capitalize">Source: {selectedJob.source}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description Section */}
+              {selectedJob.description && (
+                <div>
+                  <h4 className="text-lg font-semibold text-foreground mb-3">Description</h4>
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-muted whitespace-pre-wrap leading-relaxed">
+                      {selectedJob.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Job Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedJob.job_type && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Job Type</div>
+                    <div className="text-sm text-muted capitalize">{selectedJob.job_type}</div>
+                  </div>
+                )}
+                {selectedJob.experience_level && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Experience Level</div>
+                    <div className="text-sm text-muted capitalize">{selectedJob.experience_level}</div>
+                  </div>
+                )}
+                {selectedJob.budget_min && selectedJob.budget_max && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Budget Range</div>
+                    <div className="text-sm text-muted">
+                      {formatCurrency(selectedJob.budget_min)} - {formatCurrency(selectedJob.budget_max)}
+                    </div>
+                  </div>
+                )}
+                {selectedJob.posted_at && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Posted Date</div>
+                    <div className="text-sm text-muted">{formatDate(selectedJob.posted_at)}</div>
+                  </div>
+                )}
+                {selectedJob.deadline && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Application Deadline</div>
+                    <div className="text-sm text-muted">{formatDate(selectedJob.deadline)}</div>
+                  </div>
+                )}
+                {selectedJob.remote !== null && selectedJob.remote !== undefined && (
+                  <div className="glass-card rounded-xl border border-primary-500/10 p-4">
+                    <div className="text-sm font-semibold text-foreground mb-1">Remote Work</div>
+                    <div className="text-sm text-muted">{selectedJob.remote ? 'Yes' : 'No'}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Skills Section */}
+              {selectedJob.skills && selectedJob.skills.length > 0 && (
+                <div>
+                  <h4 className="text-lg font-semibold text-foreground mb-3">Required Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="chip bg-primary-500/15 text-primary-600 border-primary-500/25"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-primary-500/10">
+                {selectedJob.url && (
+                  <a
+                    href={selectedJob.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary flex-1 text-center"
+                  >
+                    View on Source Website
+                  </a>
+                )}
+                <button
+                  onClick={handleCloseModal}
+                  className="btn-secondary flex-1"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
