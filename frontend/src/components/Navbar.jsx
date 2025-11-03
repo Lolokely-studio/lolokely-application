@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { LogOut, MoonStar, SunMedium } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -6,6 +7,9 @@ import { useTheme } from '../contexts/ThemeContext';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav className="glass-nav sticky top-0 z-40">
@@ -18,6 +22,29 @@ const Navbar = () => {
             <h1 className="text-lg font-semibold text-foreground">Lolokely Admin</h1>
             <p className="text-xs text-muted">Green workflow dashboard</p>
           </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            to="/dashboard"
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              isActive('/dashboard')
+                ? 'bg-primary-500/25 text-foreground border border-primary-500/25'
+                : 'text-muted hover:text-foreground hover:bg-primary-500/10'
+            }`}
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/jobs"
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              isActive('/jobs')
+                ? 'bg-primary-500/25 text-foreground border border-primary-500/25'
+                : 'text-muted hover:text-foreground hover:bg-primary-500/10'
+            }`}
+          >
+            Jobs
+          </Link>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
