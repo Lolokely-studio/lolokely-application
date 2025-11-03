@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
+import Jobs from './components/Jobs';
 import Navbar from './components/Navbar';
 
 const ProtectedRoute = ({ children }) => {
@@ -35,6 +36,17 @@ const AppRoutes = () => {
             <div>
               <Navbar />
               <Dashboard />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jobs"
+        element={
+          <ProtectedRoute>
+            <div>
+              <Navbar />
+              <Jobs />
             </div>
           </ProtectedRoute>
         }

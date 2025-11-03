@@ -80,3 +80,15 @@ export const userService = {
     return response.data;
   },
 };
+
+export const jobService = {
+  async getJobs() {
+    const response = await api.get('/jobs/');
+    return response.data;
+  },
+
+  async getJob(jobId) {
+    const response = await api.get(`/jobs/${jobId}`);
+    return response.data;
+  },
+};
