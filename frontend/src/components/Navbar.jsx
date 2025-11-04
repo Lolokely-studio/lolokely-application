@@ -45,6 +45,16 @@ const Navbar = () => {
           >
             Jobs
           </Link>
+          <Link
+            to="/posts"
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              isActive('/posts')
+                ? 'bg-primary-500/25 text-foreground border border-primary-500/25'
+                : 'text-muted hover:text-foreground hover:bg-primary-500/10'
+            }`}
+          >
+            Post Generator
+          </Link>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
