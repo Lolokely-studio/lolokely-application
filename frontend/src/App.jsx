@@ -7,6 +7,7 @@ import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
 import Jobs from './components/Jobs';
 import PostGenerator from './components/PostGenerator';
+import PostHistory from './components/PostHistory';
 import Navbar from './components/Navbar';
 
 const ProtectedRoute = ({ children }) => {
@@ -59,6 +60,17 @@ const AppRoutes = () => {
             <div>
               <Navbar />
               <PostGenerator />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts/history"
+        element={
+          <ProtectedRoute>
+            <div>
+              <Navbar />
+              <PostHistory />
             </div>
           </ProtectedRoute>
         }

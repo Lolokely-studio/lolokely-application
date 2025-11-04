@@ -21,7 +21,7 @@ def generate_post_variations(theme, description, platform, tonality, language, t
     """Generate social media post variations using Gemini AI"""
     try:
         if not GEMINI_API_KEY:
-            raise ValueError("Gemini API key not configured")
+            raise ValueError("Gemini API key not configured. Please set GEMINI_API_KEY in your .env file. Get your API key from https://aistudio.google.com/app/apikey")
         
         # Initialize Gemini client
         client = genai.Client(api_key=GEMINI_API_KEY)
@@ -69,10 +69,18 @@ Return ONLY the JSON array, no additional text or explanation."""
         import re
         
         # Extract JSON from response - handle different response structures
+        # The response object from google-genai has a 'text' property
         if hasattr(response, 'text'):
             text = response.text.strip()
         elif hasattr(response, 'candidates') and response.candidates:
-            text = response.candidates[0].content.parts[0].text.strip()
+            # Fallback for different response structure
+            if hasattr(response.candidates[0], 'content'):
+                if hasattr(response.candidates[0].content, 'parts'):
+                    text = response.candidates[0].content.parts[0].text.strip()
+                else:
+                    text = str(response.candidates[0].content).strip()
+            else:
+                text = str(response.candidates[0]).strip()
         else:
             # Try to get text from response object
             text = str(response).strip()
@@ -194,12 +202,13 @@ def generate_posts():
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
         
-        theme = data.get('theme', '').strip()
-        description = data.get('description', '').strip()
-        platform = data.get('platform', '').strip()
-        tonality = data.get('tonality', '').strip()
-        language = data.get('language', 'en').strip()
-        target_audience = data.get('target_audience', '').strip()
+        # Handle None values - .get() returns None if key exists with None value
+        theme = (data.get('theme') or '').strip()
+        description = (data.get('description') or '').strip()
+        platform = (data.get('platform') or '').strip()
+        tonality = (data.get('tonality') or '').strip()
+        language = (data.get('language') or 'en').strip()
+        target_audience = (data.get('target_audience') or '').strip()
         
         if not all([theme, platform, tonality]):
             return jsonify({'error': 'Theme, platform, and tonality are required'}), 400
@@ -237,16 +246,17 @@ def save_post():
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
         
-        theme = data.get('theme', '').strip()
-        description = data.get('description', '').strip()
-        platform = data.get('platform', '').strip()
-        tonality = data.get('tonality', '').strip()
-        language = data.get('language', 'en').strip()
-        target_audience = data.get('target_audience', '').strip()
-        generated_variations = data.get('generated_variations', [])
-        selected_variation = data.get('selected_variation', '').strip()
-        media_url = data.get('media_url', '').strip()
-        media_type = data.get('media_type', '').strip()
+        # Handle None values - .get() returns None if key exists with None value
+        theme = (data.get('theme') or '').strip()
+        description = (data.get('description') or '').strip()
+        platform = (data.get('platform') or '').strip()
+        tonality = (data.get('tonality') or '').strip()
+        language = (data.get('language') or 'en').strip()
+        target_audience = (data.get('target_audience') or '').strip()
+        generated_variations = data.get('generated_variations') or []
+        selected_variation = (data.get('selected_variation') or '').strip()
+        media_url = (data.get('media_url') or '').strip()
+        media_type = (data.get('media_type') or '').strip()
         
         if not selected_variation:
             return jsonify({'error': 'Selected variation is required'}), 400

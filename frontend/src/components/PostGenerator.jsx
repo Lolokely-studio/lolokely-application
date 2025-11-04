@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { postService } from '../services/postService';
-import { Check, Copy, Sparkles, Image, X } from 'lucide-react';
+import { Check, Copy, Sparkles, Image, X, History } from 'lucide-react';
 
 const PostGenerator = () => {
   const [formData, setFormData] = useState({
@@ -132,13 +133,24 @@ const PostGenerator = () => {
     <div className="min-h-screen py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground flex items-center gap-3">
-            <Sparkles className="h-8 w-8 text-primary-600" />
-            Social Media Post Generator
-          </h1>
-          <p className="mt-2 text-muted">
-            Generate engaging social media posts for Gaming, 3D, Design, AR/VR, and more.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-foreground flex items-center gap-3">
+                <Sparkles className="h-8 w-8 text-primary-600" />
+                Social Media Post Generator
+              </h1>
+              <p className="mt-2 text-muted">
+                Generate engaging social media posts for Gaming, 3D, Design, AR/VR, and more.
+              </p>
+            </div>
+            <Link
+              to="/posts/history"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-primary-500/25 bg-primary-500/10 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 hover:border-primary-500/50"
+            >
+              <History className="h-4 w-4" />
+              View History
+            </Link>
+          </div>
         </div>
 
         {error && (
