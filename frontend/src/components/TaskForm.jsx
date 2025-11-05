@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 const TaskForm = ({ task, onSubmit, onCancel }) => {
@@ -18,6 +18,14 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
     }));
   };
 
+  useEffect(() => {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = {
@@ -27,16 +35,28 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
     onSubmit(submitData);
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="glass-panel mx-4 w-full max-w-md px-6 py-6 sm:px-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">
             {task ? 'Edit Task' : 'Create New Task'}
           </h2>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted transition hover:text-foreground"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -44,7 +64,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="title" className="mb-1 block text-sm font-medium text-muted">
               Title *
             </label>
             <input
@@ -60,7 +80,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="mb-1 block text-sm font-medium text-muted">
               Description
             </label>
             <textarea
@@ -76,7 +96,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="status" className="mb-1 block text-sm font-medium text-muted">
                 Status
               </label>
               <select
@@ -93,7 +113,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
             </div>
 
             <div>
-              <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="priority" className="mb-1 block text-sm font-medium text-muted">
                 Priority
               </label>
               <select
@@ -111,7 +131,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
           </div>
 
           <div>
-            <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="due_date" className="mb-1 block text-sm font-medium text-muted">
               Due Date
             </label>
             <input
@@ -124,7 +144,7 @@ const TaskForm = ({ task, onSubmit, onCancel }) => {
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onCancel}

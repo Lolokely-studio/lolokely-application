@@ -1,9 +1,10 @@
-# Lolokely Admin - Task Management Application
+# Lolokely Admin - Task Management & Social Media Post Generator
 
-A full-stack web application for team task management similar to Monday.com, built with Flask backend and React frontend.
+A full-stack web application for team task management, with integrated AI-powered social media post generation. Built with Flask backend and React frontend.
 
 ## Features
 
+### Task Management
 - **User Authentication**: Registration, login, and JWT-based authentication
 - **Task Management**: Create, read, update, and delete tasks
 - **Subtask Support**: Hierarchical task structure with subtasks
@@ -11,18 +12,34 @@ A full-stack web application for team task management similar to Monday.com, bui
 - **Status Tracking**: Track task progress (To Do, In Progress, Completed)
 - **Priority Levels**: Set task priorities (Low, Medium, High)
 - **Due Dates**: Set and track task deadlines
+
+### Social Media Post Generator
+- **AI-Powered Generation**: Generate engaging social media posts using Google Gemini AI
+- **Multiple Variations**: Get 3 different post variations for each generation
+- **Platform Support**: Instagram, Facebook, Twitter, LinkedIn, TikTok, YouTube
+- **Customizable Tonality**: Professional, Casual, Funny, Inspirational, Educational, Energetic
+- **Multi-Language Support**: English, French, Spanish, German, Italian
+- **Media Attachments**: Attach images or videos to posts
+- **Post History**: View and manage all generated posts with full history
+- **User Preferences**: System learns from your choices to improve suggestions
+
+### UI/UX
 - **Modern UI**: Clean, responsive interface built with Tailwind CSS
+- **Dark/Light Theme**: Theme switching support
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
 
 ## Tech Stack
 
 ### Backend
 - **Flask**: Python web framework
-- **SQLAlchemy**: ORM for database operations
 - **PostgreSQL**: Primary database (Supabase)
 - **Flask-JWT-Extended**: JWT authentication
 - **Flask-Bcrypt**: Password hashing
 - **Marshmallow**: Data validation and serialization
 - **Flask-CORS**: Cross-origin resource sharing
+- **Google Generative AI (Gemini)**: AI-powered content generation
+- **python-dotenv**: Environment variable management
+- **psycopg2**: PostgreSQL adapter
 
 ### Frontend
 - **React**: JavaScript library for building user interfaces
@@ -30,7 +47,7 @@ A full-stack web application for team task management similar to Monday.com, bui
 - **Tailwind CSS**: Utility-first CSS framework
 - **React Router**: Client-side routing
 - **Axios**: HTTP client for API requests
-- **Heroicons**: Beautiful SVG icons
+- **Lucide React**: Beautiful SVG icons
 
 ## Project Structure
 
@@ -75,18 +92,31 @@ lolokely-admin/
    ```
 
 4. **Set up environment variables:**
+   Create a `.env` file in the backend directory with the following variables:
    ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
+   # Database Configuration
+   USER_DB=your_database_user
+   PASSWORD_DB=your_database_password
+   HOST=your_database_host
+   PORT=5432
+   DBNAME=your_database_name
+
+   # JWT Configuration
+   SECRET_KEY=your-secret-key-here
+   JWT_SECRET_KEY=your-jwt-secret-key-here
+
+   # Google Gemini API Configuration
+   # Get your API key from: https://aistudio.google.com/app/apikey
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
 5. **Initialize database:**
+   Run the SQL schema file to create all necessary tables:
    ```bash
-   export FLASK_APP=app.py
-   flask db init
-   flask db migrate -m "Initial migration"
-   flask db upgrade
+   # Connect to your PostgreSQL database and run:
+   psql -h your_host -U your_user -d your_database -f schemas/db.sql
    ```
+   Or manually execute the SQL from `backend/schemas/db.sql` in your database.
 
 6. **Run the backend server:**
    ```bash
@@ -145,6 +175,12 @@ The frontend will be available at `http://localhost:5173`
 - `GET /api/users/` - Get all users
 - `GET /api/users/<id>` - Get specific user
 
+### Social Media Posts
+- `POST /api/posts/generate` - Generate social media post variations using AI
+- `POST /api/posts/save` - Save a generated post
+- `GET /api/posts/` - Get all saved posts for current user
+- `GET /api/posts/preferences` - Get user post preferences
+
 ## Database Schema
 
 ### Users Table
@@ -189,14 +225,63 @@ The frontend will be available at `http://localhost:5173`
 - `user_id` (UUID, Foreign Key)
 - `assigned_at` (DateTime)
 
+### Social Posts Table
+- `id` (UUID, Primary Key)
+- `user_id` (UUID, Foreign Key)
+- `theme` (String)
+- `description` (Text)
+- `platform` (String: Instagram, Facebook, Twitter, LinkedIn, TikTok, YouTube)
+- `tonality` (String: Professional, Casual, Funny, Inspirational, Educational, Energetic)
+- `language` (String: en, fr, es, de, it)
+- `target_audience` (Text)
+- `generated_variations` (JSONB: Array of generated post variations)
+- `selected_variation` (Text: The chosen variation)
+- `media_url` (Text: URL or base64 data)
+- `media_type` (String: image, video, or null)
+- `created_at` (DateTime)
+- `updated_at` (DateTime)
+
+### User Post Preferences Table
+- `id` (UUID, Primary Key)
+- `user_id` (UUID, Foreign Key, Unique)
+- `preferred_platforms` (JSONB: Array of preferred platforms)
+- `preferred_tonalities` (JSONB: Array of preferred tonalities)
+- `preferred_languages` (JSONB: Array of preferred languages)
+- `common_themes` (JSONB: Array of frequently used themes)
+- `created_at` (DateTime)
+- `updated_at` (DateTime)
+
 ## Usage
 
+### Task Management
 1. **Register/Login**: Create an account or sign in to access the dashboard
 2. **Create Tasks**: Click "Create New Task" to add tasks with titles, descriptions, priorities, and due dates
 3. **Manage Tasks**: Update task status, priority, and details directly from the task cards
 4. **Add Subtasks**: Create subtasks within existing tasks for better organization
 5. **Assign Team Members**: Assign tasks and subtasks to team members
 6. **Track Progress**: Monitor task completion and team workload
+
+### Social Media Post Generation
+1. **Navigate to Post Generator**: Click "Post Generator" in the navigation menu
+2. **Fill in Post Details**: 
+   - Enter a theme (required)
+   - Add a description (optional)
+   - Select platform (Instagram, Facebook, Twitter, etc.)
+   - Choose tonality (Professional, Casual, Funny, etc.)
+   - Select language (English, French, Spanish, etc.)
+   - Specify target audience (optional)
+3. **Generate Posts**: Click "Generate Posts" to get 3 AI-generated variations
+4. **Select Variation**: Choose your preferred post from the generated variations
+5. **Add Media** (Optional): Upload images or videos to accompany your post
+6. **Save Post**: Click "Save Post" to store it in your history
+7. **View History**: Access "Post History" to view all your saved posts, copy them, or see all variations
+
+### Post History Features
+- View all saved posts with metadata
+- Expand posts to see all generated variations
+- Copy any variation to clipboard
+- See media attachments
+- Filter by platform, tonality, or date
 
 ## Security Features
 
@@ -238,8 +323,11 @@ npm test
 
 ### Backend Deployment
 1. Set up PostgreSQL database (Supabase recommended)
-2. Configure environment variables
-3. Deploy to your preferred platform (Heroku, Railway, etc.)
+2. Configure environment variables (including `GEMINI_API_KEY`)
+3. Ensure Generative Language API is enabled in Google Cloud Console
+4. Deploy to your preferred platform (Heroku, Railway, etc.)
+
+**Note**: Make sure to add your `GEMINI_API_KEY` to the environment variables. Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
 ### Frontend Deployment
 1. Build the production bundle: `npm run build`

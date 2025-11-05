@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import { authService } from '../services/taskService';
 
 const AuthContext = createContext();
+
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 const authReducer = (state, action) => {
   switch (action.type) {
@@ -32,6 +34,7 @@ const authReducer = (state, action) => {
         user: null,
         token: null,
         error: null,
+        loading: false,
       };
     case 'SET_USER':
       return {
@@ -48,27 +51,110 @@ const initialState = {
   isAuthenticated: false,
   user: null,
   token: null,
-  loading: false,
+  loading: true, // Start with loading true to check localStorage
   error: null,
 };
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const inactivityTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (token && user) {
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: {
-          access_token: token,
-          user: JSON.parse(user),
-        },
-      });
+  // Logout function
+  const logout = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
     }
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    dispatch({ type: 'LOGOUT' });
   }, []);
+
+  // Function to reset inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+
+    if (state.isAuthenticated) {
+      lastActivityRef.current = Date.now();
+      
+      inactivityTimerRef.current = setTimeout(() => {
+        // Check if still inactive
+        const timeSinceLastActivity = Date.now() - lastActivityRef.current;
+        if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+          // Logout due to inactivity
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          dispatch({ type: 'LOGOUT' });
+          alert('You have been logged out due to 30 minutes of inactivity.');
+        }
+      }, INACTIVITY_TIMEOUT);
+    }
+  }, [state.isAuthenticated]);
+
+  // Restore session on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      
+      if (token && user) {
+        try {
+          // Verify token is still valid by making a request to /me endpoint
+          const userData = JSON.parse(user);
+          // Restore from localStorage - token will be verified on first API call
+          dispatch({
+            type: 'LOGIN_SUCCESS',
+            payload: {
+              access_token: token,
+              user: userData,
+            },
+          });
+        } catch (error) {
+          // Token might be invalid, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          dispatch({ type: 'LOGOUT' });
+        }
+      } else {
+        dispatch({ type: 'LOGOUT' });
+      }
+    };
+
+    restoreSession();
+  }, []);
+
+  // Track user activity
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      return;
+    }
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const handleActivity = () => {
+      lastActivityRef.current = Date.now();
+      resetInactivityTimer();
+    };
+
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    resetInactivityTimer();
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [state.isAuthenticated, resetInactivityTimer]);
 
   const login = async (credentials) => {
     dispatch({ type: 'LOGIN_START' });
@@ -110,12 +196,6 @@ export const AuthProvider = ({ children }) => {
       });
       throw error;
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    dispatch({ type: 'LOGOUT' });
   };
 
   const value = {

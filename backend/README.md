@@ -10,17 +10,36 @@ A Flask-based REST API for task management similar to Monday.com.
    ```
 
 2. **Set up environment variables:**
+   Create a `.env` file in the backend directory with the following variables:
    ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
+   # Database Configuration
+   USER_DB=your_database_user
+   PASSWORD_DB=your_database_password
+   HOST=your_database_host
+   PORT=5432
+   DBNAME=your_database_name
+
+   # JWT Configuration
+   SECRET_KEY=your-secret-key-here
+   JWT_SECRET_KEY=your-jwt-secret-key-here
+
+   # Google Gemini API Configuration
+   # Get your API key from: https://aistudio.google.com/app/apikey
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
-3. **Initialize database:**
-   ```bash
-   export FLASK_APP=app.py
-   flask db init
-   flask db migrate -m "Initial migration"
-   flask db upgrade
+3. **Configure database (Supabase Postgres):**
+   Set your `.env` with either a full connection string or discrete values:
+   ```env
+   # Full connection string (preferred)
+   DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+
+   # Or discrete values used by backend/db.py
+   USER=...
+   PASSWORD=...
+   HOST=...
+   PORT=5432
+   DBNAME=...
    ```
 
 4. **Run the application:**
