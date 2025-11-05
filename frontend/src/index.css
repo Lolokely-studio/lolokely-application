@@ -146,9 +146,19 @@
 
   .glass-nav {
     background: var(--navbar-bg);
-    border-bottom: 1px solid var(--navbar-border);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+  }
+  
+  /* Horizontal navbar (mobile header) */
+  nav.glass-nav {
+    border-bottom: 1px solid var(--navbar-border);
+  }
+  
+  /* Vertical sidebar (desktop) */
+  aside.glass-nav {
+    border-right: 1px solid var(--navbar-border);
+    border-bottom: none;
   }
 
   .text-foreground {
