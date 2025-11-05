@@ -10,6 +10,7 @@ import Jobs from './components/Jobs';
 import PostGenerator from './components/PostGenerator';
 import PostHistory from './components/PostHistory';
 import Navbar from './components/Navbar';
+import NotificationBell from './components/NotificationBell';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -48,6 +49,10 @@ const LayoutWrapper = ({ children }) => {
           marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
         }}
       >
+        {/* Notification Bell - Fixed top right */}
+        <div className="fixed top-4 right-4 z-50">
+          <NotificationBell />
+        </div>
         {children}
       </main>
     </div>

@@ -253,6 +253,19 @@
   .divider-soft {
     border-color: var(--divider-soft);
   }
+
+  .highlight-task {
+    animation: highlight-pulse 2s ease-in-out;
+  }
+
+  @keyframes highlight-pulse {
+    0%, 100% {
+      background-color: transparent;
+    }
+    50% {
+      background-color: rgba(16, 185, 129, 0.2);
+    }
+  }
 }
 
 @layer utilities {
