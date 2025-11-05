@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SidebarProvider, useSidebar } from './contexts/SidebarContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
@@ -25,6 +26,34 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
+const LayoutWrapper = ({ children }) => {
+  const { isCollapsed } = useSidebar();
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return (
+    <div className="flex min-h-screen">
+      <Navbar />
+      <main 
+        className="flex-1 transition-all duration-300 min-h-screen"
+        style={{
+          marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
+        }}
+      >
+        {children}
+      </main>
+    </div>
+  );
+};
+
 const AppRoutes = () => {
   console.log('AppRoutes render');
   return (
@@ -35,10 +64,9 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <div>
-              <Navbar />
+            <LayoutWrapper>
               <Dashboard />
-            </div>
+            </LayoutWrapper>
           </ProtectedRoute>
         }
       />
@@ -46,10 +74,9 @@ const AppRoutes = () => {
         path="/jobs"
         element={
           <ProtectedRoute>
-            <div>
-              <Navbar />
+            <LayoutWrapper>
               <Jobs />
-            </div>
+            </LayoutWrapper>
           </ProtectedRoute>
         }
       />
@@ -57,10 +84,9 @@ const AppRoutes = () => {
         path="/posts"
         element={
           <ProtectedRoute>
-            <div>
-              <Navbar />
+            <LayoutWrapper>
               <PostGenerator />
-            </div>
+            </LayoutWrapper>
           </ProtectedRoute>
         }
       />
@@ -68,10 +94,9 @@ const AppRoutes = () => {
         path="/posts/history"
         element={
           <ProtectedRoute>
-            <div>
-              <Navbar />
+            <LayoutWrapper>
               <PostHistory />
-            </div>
+            </LayoutWrapper>
           </ProtectedRoute>
         }
       />
@@ -86,9 +111,11 @@ const App = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <SidebarProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </SidebarProvider>
       </AuthProvider>
     </ThemeProvider>
   );
