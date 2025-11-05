@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { postService } from '../services/postService';
 import { History, Copy, Calendar, Globe, MessageSquare, Sparkles, Eye, EyeOff } from 'lucide-react';
+import UserAvatar from './UserAvatar';
 
 const PostHistory = () => {
   const [posts, setPosts] = useState([]);
@@ -81,7 +82,7 @@ const PostHistory = () => {
                 Post History
               </h1>
               <p className="mt-2 text-muted">
-                View and manage all your generated social media posts.
+                View and manage all generated social media posts from all users.
               </p>
             </div>
             <Link
@@ -135,9 +136,18 @@ const PostHistory = () => {
                   {/* Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
-                        {post.theme || 'Untitled Post'}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold text-foreground">
+                          {post.theme || 'Untitled Post'}
+                        </h3>
+                        {post.user && (
+                          <UserAvatar 
+                            user={post.user} 
+                            size="sm" 
+                            className="flex-shrink-0"
+                          />
+                        )}
+                      </div>
                       {post.description && (
                         <p className="text-muted mb-3">{post.description}</p>
                       )}

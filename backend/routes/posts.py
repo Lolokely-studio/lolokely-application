@@ -303,20 +303,18 @@ def save_post():
 @posts_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_posts():
-    """Get all posts for the current user"""
+    """Get all posts from all users"""
     try:
-        user_id = get_jwt_identity()
-        
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
-                    """SELECT id, theme, description, platform, tonality, language, 
-                       target_audience, generated_variations, selected_variation, 
-                       media_url, media_type, created_at, updated_at
-                       FROM social_posts 
-                       WHERE user_id = %s 
-                       ORDER BY created_at DESC""",
-                    (user_id,)
+                    """SELECT sp.id, sp.theme, sp.description, sp.platform, sp.tonality, sp.language, 
+                       sp.target_audience, sp.generated_variations, sp.selected_variation, 
+                       sp.media_url, sp.media_type, sp.created_at, sp.updated_at,
+                       sp.user_id, u.first_name, u.last_name, u.email
+                       FROM social_posts sp
+                       INNER JOIN users u ON sp.user_id = u.id
+                       ORDER BY sp.created_at DESC"""
                 )
                 posts = cur.fetchall()
         
@@ -334,7 +332,13 @@ def get_posts():
                 'media_url': p['media_url'],
                 'media_type': p['media_type'],
                 'created_at': p['created_at'].isoformat() if p['created_at'] else None,
-                'updated_at': p['updated_at'].isoformat() if p['updated_at'] else None
+                'updated_at': p['updated_at'].isoformat() if p['updated_at'] else None,
+                'user': {
+                    'id': p['user_id'],
+                    'first_name': p['first_name'],
+                    'last_name': p['last_name'],
+                    'email': p['email']
+                }
             } for p in posts]
         }), 200
         
