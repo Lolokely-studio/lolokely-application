@@ -87,6 +87,19 @@ create table if not exists public.user_post_preferences (
   unique (user_id)
 );
 
+-- NOTIFICATIONS
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  type varchar(50) not null check (type in ('task_created', 'task_assigned', 'subtask_assigned')),
+  message text not null,
+  related_task_id uuid references public.tasks(id) on delete cascade,
+  related_subtask_id uuid references public.subtasks(id) on delete cascade,
+  created_by_user_id uuid references public.users(id) on delete set null,
+  is_read boolean not null default false,
+  created_at timestamptz default now()
+);
+
 -- Helpful indexes
 create index if not exists idx_tasks_created_at on public.tasks(created_at);
 create index if not exists idx_subtasks_task_id on public.subtasks(task_id);
@@ -97,3 +110,6 @@ create index if not exists idx_subtask_assignments_user_id on public.subtask_ass
 create index if not exists idx_social_posts_user_id on public.social_posts(user_id);
 create index if not exists idx_social_posts_created_at on public.social_posts(created_at);
 create index if not exists idx_user_post_preferences_user_id on public.user_post_preferences(user_id);
+create index if not exists idx_notifications_user_id on public.notifications(user_id);
+create index if not exists idx_notifications_is_read on public.notifications(is_read);
+create index if not exists idx_notifications_created_at on public.notifications(created_at);
