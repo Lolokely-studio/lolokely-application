@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import logoImage from '../assets/lolokely-logo.png';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -63,8 +64,12 @@ const Navbar = () => {
         <nav className="glass-nav sticky top-0 z-40 md:hidden">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-                <span className="text-lg font-semibold">LK</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden">
+                <img 
+                  src={logoImage} 
+                  alt="Lolokely Logo" 
+                  className="h-full w-full object-contain"
+                />
               </div>
               <div className="leading-tight">
                 <h1 className="text-lg font-semibold text-foreground">Lolokely Admin</h1>
@@ -101,8 +106,12 @@ const Navbar = () => {
               <div className="flex flex-col h-full p-4">
                 {/* Logo */}
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b divider-soft">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-                    <span className="text-lg font-semibold">LK</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden">
+                    <img 
+                      src={logoImage} 
+                      alt="Lolokely Logo" 
+                      className="h-full w-full object-contain"
+                    />
                   </div>
                   <div className="leading-tight">
                     <h1 className="text-lg font-semibold text-foreground">Lolokely Admin</h1>
@@ -189,8 +198,12 @@ const Navbar = () => {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-                  <span className="text-lg font-semibold">LK</span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden">
+                  <img 
+                    src={logoImage} 
+                    alt="Lolokely Logo" 
+                    className="h-full w-full object-contain"
+                  />
                 </div>
                 <div className="leading-tight">
                   <h1 className="text-lg font-semibold text-foreground">Lolokely Admin</h1>
@@ -208,8 +221,12 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-                <span className="text-lg font-semibold">LK</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden">
+                <img 
+                  src={logoImage} 
+                  alt="Lolokely Logo" 
+                  className="h-full w-full object-contain"
+                />
               </div>
               <button
                 type="button"

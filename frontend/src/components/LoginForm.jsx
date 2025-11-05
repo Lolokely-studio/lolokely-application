@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Leaf } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import logoImage from '../assets/lolokely-logo.png';
 
 const LoginForm = () => {
   console.log('LoginForm render');
@@ -10,6 +11,7 @@ const LoginForm = () => {
     password: '',
   });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -38,8 +40,12 @@ const LoginForm = () => {
       <div className="relative z-10 w-full max-w-md">
         <div className="glass-panel space-y-8 px-6 py-10 sm:px-10">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-              <Leaf className="h-7 w-7" />
+            <div className="flex h-40 w-40 items-center justify-center rounded-2xl overflow-hidden">
+              <img 
+                src={logoImage} 
+                alt="Lolokely Logo" 
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <h2 className="text-3xl font-semibold text-foreground">Sign in to Lolokely</h2>
@@ -81,17 +87,31 @@ const LoginForm = () => {
                 <label htmlFor="password" className="text-sm font-medium text-muted">
                   Password
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="input-field"
-                  placeholder="Enter your password"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="input-field pr-10"
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 

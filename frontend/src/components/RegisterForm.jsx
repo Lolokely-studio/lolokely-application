@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sprout } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import logoImage from '../assets/lolokely-logo.png';
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,8 @@ const RegisterForm = () => {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -50,8 +53,12 @@ const RegisterForm = () => {
       <div className="relative z-10 w-full max-w-md">
         <div className="glass-panel space-y-8 px-6 py-10 sm:px-10">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-500/15 text-primary-600">
-              <Sprout className="h-7 w-7" />
+            <div className="flex h-40 w-40 items-center justify-center rounded-2xl overflow-hidden">
+              <img 
+                src={logoImage} 
+                alt="Lolokely Logo" 
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <h2 className="text-3xl font-semibold text-foreground">Create your Lolokely account</h2>
@@ -128,34 +135,62 @@ const RegisterForm = () => {
                   <label htmlFor="password" className="text-sm font-medium text-muted">
                     Password
                   </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="input-field"
-                    placeholder="Enter your password"
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="input-field pr-10"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="confirmPassword" className="text-sm font-medium text-muted">
                     Confirm password
                   </label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="input-field"
-                    placeholder="Confirm your password"
-                  />
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="input-field pr-10"
+                      placeholder="Confirm your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
