@@ -277,6 +277,55 @@ def get_pending_leave_requests():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@leaves_bp.route('/history', methods=['GET'])
+@jwt_required()
+def get_leave_history():
+    """Get processed leave requests history (admin only)"""
+    try:
+        user_id = get_jwt_identity()
+        
+        if not is_admin(user_id):
+            return jsonify({'error': 'Unauthorized. Admin access required.'}), 403
+        
+        with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT lr.*, u.first_name, u.last_name, u.email,
+                       approver.first_name as approver_first_name, approver.last_name as approver_last_name
+                FROM leave_requests lr
+                JOIN users u ON lr.user_id = u.id
+                LEFT JOIN users approver ON lr.approved_by = approver.id
+                WHERE lr.status IN ('approved', 'rejected')
+                ORDER BY lr.updated_at DESC
+                """
+            )
+            leaves = cur.fetchall()
+        
+        return jsonify({
+            'leave_requests': [{
+                'id': lr['id'],
+                'user_id': lr['user_id'],
+                'user_name': f"{lr['first_name']} {lr['last_name']}",
+                'user_email': lr['email'],
+                'start_date': lr['start_date'].isoformat() if lr['start_date'] else None,
+                'end_date': lr['end_date'].isoformat() if lr['end_date'] else None,
+                'leave_type': lr['leave_type'],
+                'reason': lr['reason'],
+                'status': lr['status'],
+                'approved_by': lr['approved_by'],
+                'approver_name': f"{lr['approver_first_name']} {lr['approver_last_name']}" if lr['approver_first_name'] else None,
+                'approved_at': lr['approved_at'].isoformat() if lr['approved_at'] else None,
+                'rejection_reason': lr['rejection_reason'],
+                'created_at': lr['created_at'].isoformat() if lr['created_at'] else None,
+                'updated_at': lr['updated_at'].isoformat() if lr['updated_at'] else None,
+            } for lr in leaves]
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in get_leave_history: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @leaves_bp.route('/<leave_id>/approve', methods=['PUT'])
 @jwt_required()
 def approve_leave_request(leave_id):
