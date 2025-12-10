@@ -9,6 +9,7 @@ create table if not exists public.users (
   password_hash varchar(128) not null,
   first_name varchar(50) not null,
   last_name varchar(50) not null,
+  is_admin boolean not null default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -100,6 +101,22 @@ create table if not exists public.notifications (
   created_at timestamptz default now()
 );
 
+-- LEAVE REQUESTS
+create table if not exists public.leave_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  start_date date not null,
+  end_date date not null,
+  leave_type varchar(50) not null check (leave_type in ('vacation', 'sick', 'personal', 'other')),
+  reason text,
+  status varchar(20) not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  approved_by uuid references public.users(id) on delete set null,
+  approved_at timestamptz,
+  rejection_reason text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- Helpful indexes
 create index if not exists idx_tasks_created_at on public.tasks(created_at);
 create index if not exists idx_subtasks_task_id on public.subtasks(task_id);
@@ -113,3 +130,8 @@ create index if not exists idx_user_post_preferences_user_id on public.user_post
 create index if not exists idx_notifications_user_id on public.notifications(user_id);
 create index if not exists idx_notifications_is_read on public.notifications(is_read);
 create index if not exists idx_notifications_created_at on public.notifications(created_at);
+create index if not exists idx_leave_requests_user_id on public.leave_requests(user_id);
+create index if not exists idx_leave_requests_status on public.leave_requests(status);
+create index if not exists idx_leave_requests_start_date on public.leave_requests(start_date);
+create index if not exists idx_leave_requests_end_date on public.leave_requests(end_date);
+create index if not exists idx_users_is_admin on public.users(is_admin);
