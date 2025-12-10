@@ -19,7 +19,7 @@ def get_notifications():
                 cur.execute(
                     """
                     SELECT n.id, n.type, n.message, n.related_task_id, n.related_subtask_id,
-                           n.created_by_user_id, n.is_read, n.created_at,
+                           n.related_leave_request_id, n.created_by_user_id, n.is_read, n.created_at,
                            u.first_name, u.last_name, u.email
                     FROM notifications n
                     LEFT JOIN users u ON n.created_by_user_id = u.id
@@ -38,6 +38,7 @@ def get_notifications():
                 'message': n['message'],
                 'related_task_id': n['related_task_id'],
                 'related_subtask_id': n['related_subtask_id'],
+                'related_leave_request_id': n['related_leave_request_id'],
                 'created_by_user_id': n['created_by_user_id'],
                 'created_by_user': {
                     'first_name': n['first_name'],

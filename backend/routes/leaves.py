@@ -19,6 +19,26 @@ def is_admin(user_id):
         user = cur.fetchone()
         return user and user.get('is_admin', False)
 
+def create_notification(cur, user_id, type, message, related_leave_request_id=None, created_by_user_id=None):
+    """Helper function to create a notification using the existing cursor"""
+    try:
+        cur.execute(
+            """
+            INSERT INTO notifications (id, user_id, type, message, related_leave_request_id, created_by_user_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (str(uuid.uuid4()), user_id, type, message, related_leave_request_id, created_by_user_id)
+        )
+    except Exception as e:
+        print(f"Error creating notification: {str(e)}")
+        traceback.print_exc()
+        # Don't fail the request if notification creation fails
+
+def get_all_admins(cur):
+    """Get all admin user IDs"""
+    cur.execute("SELECT id FROM users WHERE is_admin = true")
+    return cur.fetchall()
+
 @leaves_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_leave_request():
@@ -37,6 +57,11 @@ def create_leave_request():
         
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Get user info for notification
+                cur.execute("SELECT first_name, last_name FROM users WHERE id = %s", (user_id,))
+                requester = cur.fetchone()
+                requester_name = f"{requester['first_name']} {requester['last_name']}" if requester else "A user"
+                
                 leave_id = str(uuid.uuid4())
                 now = datetime.utcnow()
                 cur.execute(
@@ -57,6 +82,34 @@ def create_leave_request():
                     )
                 )
                 leave = cur.fetchone()
+                
+                # Notify all administrators
+                admins = get_all_admins(cur)
+                # Format dates for notification
+                start_date_obj = validated_data['start_date']
+                end_date_obj = validated_data['end_date']
+                if isinstance(start_date_obj, str):
+                    from datetime import datetime as dt
+                    start_date_obj = dt.strptime(start_date_obj, '%Y-%m-%d').date()
+                if isinstance(end_date_obj, str):
+                    from datetime import datetime as dt
+                    end_date_obj = dt.strptime(end_date_obj, '%Y-%m-%d').date()
+                
+                start_date_str = start_date_obj.strftime('%B %d, %Y')
+                end_date_str = end_date_obj.strftime('%B %d, %Y')
+                leave_type_display = validated_data['leave_type'].replace('_', ' ').title()
+                message = f"{requester_name} has requested {leave_type_display} leave from {start_date_str} to {end_date_str}"
+                
+                for admin in admins:
+                    create_notification(
+                        cur,
+                        admin['id'],
+                        'leave_requested',
+                        message,
+                        related_leave_request_id=leave_id,
+                        created_by_user_id=user_id
+                    )
+                
                 conn.commit()
         
         return jsonify({
@@ -289,6 +342,44 @@ def approve_leave_request(leave_id):
                     )
                 
                 updated_leave = cur.fetchone()
+                
+                # Notify the user who requested the leave
+                requester_id = leave['user_id']
+                start_date = leave['start_date']
+                end_date = leave['end_date']
+                # Format dates - they come from database as date objects
+                if start_date:
+                    if isinstance(start_date, str):
+                        from datetime import datetime as dt
+                        start_date = dt.strptime(start_date, '%Y-%m-%d').date()
+                    start_date_str = start_date.strftime('%B %d, %Y')
+                else:
+                    start_date_str = ''
+                if end_date:
+                    if isinstance(end_date, str):
+                        from datetime import datetime as dt
+                        end_date = dt.strptime(end_date, '%Y-%m-%d').date()
+                    end_date_str = end_date.strftime('%B %d, %Y')
+                else:
+                    end_date_str = ''
+                
+                if status == 'approved':
+                    notification_type = 'leave_approved'
+                    message = f"Your leave request from {start_date_str} to {end_date_str} has been approved"
+                else:  # rejected
+                    notification_type = 'leave_rejected'
+                    rejection_msg = f" Reason: {validated_data.get('rejection_reason', 'No reason provided')}" if validated_data.get('rejection_reason') else ""
+                    message = f"Your leave request from {start_date_str} to {end_date_str} has been rejected.{rejection_msg}"
+                
+                create_notification(
+                    cur,
+                    requester_id,
+                    notification_type,
+                    message,
+                    related_leave_request_id=leave_id,
+                    created_by_user_id=user_id
+                )
+                
                 conn.commit()
         
         return jsonify({

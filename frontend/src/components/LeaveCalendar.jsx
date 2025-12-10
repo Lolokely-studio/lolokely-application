@@ -1,25 +1,49 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { leaveService } from '../services/taskService';
-import { ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
+import { leaveService, userService } from '../services/taskService';
+import { ChevronLeft, ChevronRight, CalendarIcon, Filter, X } from 'lucide-react';
 
 const LeaveCalendar = () => {
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [allLeaveRequests, setAllLeaveRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     loadLeaveRequests();
+    loadUsers();
   }, []);
+
+  useEffect(() => {
+    // Filter leave requests based on selected user
+    if (selectedUserId) {
+      setLeaveRequests(allLeaveRequests.filter(leave => leave.user_id === selectedUserId));
+    } else {
+      setLeaveRequests(allLeaveRequests);
+    }
+  }, [selectedUserId, allLeaveRequests]);
 
   const loadLeaveRequests = async () => {
     try {
       setLoading(true);
       const response = await leaveService.getLeaveRequests();
-      setLeaveRequests(response.leave_requests || []);
+      const leaves = response.leave_requests || [];
+      setAllLeaveRequests(leaves);
+      setLeaveRequests(leaves);
     } catch (error) {
       console.error('Error loading leave requests:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await userService.getUsers();
+      setUsers(response.users || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
@@ -91,9 +115,37 @@ const LeaveCalendar = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground mb-1">Team Leave Calendar</h1>
-        <p className="text-sm text-muted">View all approved leave requests for the team</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Team Leave Calendar</h1>
+          <p className="text-sm text-muted">View all approved leave requests for the team</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted" />
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="input-field min-w-[200px]"
+            >
+              <option value="">All Team Members</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.first_name} {user.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedUserId && (
+            <button
+              onClick={() => setSelectedUserId('')}
+              className="flex items-center justify-center h-10 w-10 rounded-lg transition hover:bg-primary-500/10"
+              title="Clear filter"
+            >
+              <X className="h-4 w-4 text-muted" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="glass-panel p-6">
@@ -198,12 +250,14 @@ const LeaveCalendar = () => {
 
         {/* Leave List */}
         <div className="mt-6 pt-6 border-t divider-soft">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Upcoming Leaves</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">
+            {selectedUserId ? 'Filtered ' : ''}Upcoming Leaves
+          </h3>
           <div className="space-y-2">
             {leaveRequests
               .filter(leave => new Date(leave.start_date) >= new Date())
               .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-              .slice(0, 5)
+              .slice(0, 10)
               .map((leave) => (
                 <div
                   key={leave.id}
