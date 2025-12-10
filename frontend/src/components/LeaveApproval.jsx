@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { leaveService } from '../services/taskService';
-import { CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon, UserIcon, History } from 'lucide-react';
+import { leaveService, userService } from '../services/taskService';
+import { CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon, UserIcon, History, Filter, X } from 'lucide-react';
 
 const LeaveApproval = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [historyRequests, setHistoryRequests] = useState([]);
+  const [allHistoryRequests, setAllHistoryRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -13,6 +16,7 @@ const LeaveApproval = () => {
 
   useEffect(() => {
     loadPendingRequests();
+    loadUsers();
   }, []);
 
   useEffect(() => {
@@ -20,6 +24,15 @@ const LeaveApproval = () => {
       loadHistory();
     }
   }, [activeTab]);
+
+  // Filter history requests based on selected user
+  useEffect(() => {
+    if (selectedUserId) {
+      setHistoryRequests(allHistoryRequests.filter(request => request.user_id === selectedUserId));
+    } else {
+      setHistoryRequests(allHistoryRequests);
+    }
+  }, [selectedUserId, allHistoryRequests]);
 
   const loadPendingRequests = async () => {
     try {
@@ -37,11 +50,22 @@ const LeaveApproval = () => {
     try {
       setHistoryLoading(true);
       const response = await leaveService.getLeaveHistory();
-      setHistoryRequests(response.leave_requests || []);
+      const requests = response.leave_requests || [];
+      setAllHistoryRequests(requests);
+      setHistoryRequests(requests);
     } catch (error) {
       console.error('Error loading leave history:', error);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await userService.getUsers();
+      setUsers(response.users || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
@@ -272,6 +296,41 @@ const LeaveApproval = () => {
       {/* History Tab */}
       {activeTab === 'history' && (
         <>
+          {/* Filter Section */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted" />
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="input-field min-w-[200px]"
+                >
+                  <option value="">All Users</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.first_name} {user.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedUserId && (
+                <button
+                  onClick={() => setSelectedUserId('')}
+                  className="flex items-center justify-center h-10 w-10 rounded-lg transition hover:bg-primary-500/10"
+                  title="Clear filter"
+                >
+                  <X className="h-4 w-4 text-muted" />
+                </button>
+              )}
+            </div>
+            {selectedUserId && (
+              <span className="text-sm text-muted">
+                Showing {historyRequests.length} of {allHistoryRequests.length} requests
+              </span>
+            )}
+          </div>
+
           {historyLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -279,8 +338,22 @@ const LeaveApproval = () => {
           ) : historyRequests.length === 0 ? (
             <div className="glass-panel p-12 text-center">
               <History className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No History</h3>
-              <p className="text-sm text-muted">No processed leave requests yet.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {selectedUserId ? 'No Results' : 'No History'}
+              </h3>
+              <p className="text-sm text-muted">
+                {selectedUserId 
+                  ? 'No processed leave requests found for the selected user.'
+                  : 'No processed leave requests yet.'}
+              </p>
+              {selectedUserId && (
+                <button
+                  onClick={() => setSelectedUserId('')}
+                  className="mt-4 text-sm text-primary-500 hover:text-primary-600"
+                >
+                  Clear filter
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
