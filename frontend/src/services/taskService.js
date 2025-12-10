@@ -92,3 +92,35 @@ export const jobService = {
     return response.data;
   },
 };
+
+export const leaveService = {
+  async createLeaveRequest(leaveData) {
+    const response = await api.post('/leaves/', leaveData);
+    return response.data;
+  },
+
+  async getLeaveRequests() {
+    const response = await api.get('/leaves/');
+    return response.data;
+  },
+
+  async getMyLeaveRequests() {
+    const response = await api.get('/leaves/my-requests');
+    return response.data;
+  },
+
+  async getPendingLeaveRequests() {
+    const response = await api.get('/leaves/pending');
+    return response.data;
+  },
+
+  async approveLeaveRequest(leaveId, approvalData) {
+    const response = await api.put(`/leaves/${leaveId}/approve`, approvalData);
+    return response.data;
+  },
+
+  async getLeaveHistory() {
+    const response = await api.get('/leaves/history');
+    return response.data;
+  },
+};

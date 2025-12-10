@@ -9,7 +9,11 @@ import Dashboard from './components/Dashboard';
 import Jobs from './components/Jobs';
 import PostGenerator from './components/PostGenerator';
 import PostHistory from './components/PostHistory';
+import LeaveCalendar from './components/LeaveCalendar';
+import LeaveTracking from './components/LeaveTracking';
+import LeaveApproval from './components/LeaveApproval';
 import Navbar from './components/Navbar';
+import NotificationBell from './components/NotificationBell';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -24,6 +28,35 @@ const ProtectedRoute = ({ children }) => {
   }
   
   return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!user?.is_admin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted">You need administrator privileges to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return children;
 };
 
 const LayoutWrapper = ({ children }) => {
@@ -48,6 +81,10 @@ const LayoutWrapper = ({ children }) => {
           marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
         }}
       >
+        {/* Notification Bell - Fixed top right */}
+        <div className="fixed top-4 right-4 z-50">
+          <NotificationBell />
+        </div>
         {children}
       </main>
     </div>
@@ -98,6 +135,36 @@ const AppRoutes = () => {
               <PostHistory />
             </LayoutWrapper>
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaves"
+        element={
+          <ProtectedRoute>
+            <LayoutWrapper>
+              <LeaveCalendar />
+            </LayoutWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaves/my-requests"
+        element={
+          <ProtectedRoute>
+            <LayoutWrapper>
+              <LeaveTracking />
+            </LayoutWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaves/approval"
+        element={
+          <AdminRoute>
+            <LayoutWrapper>
+              <LeaveApproval />
+            </LayoutWrapper>
+          </AdminRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" />} />

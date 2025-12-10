@@ -42,7 +42,7 @@ def register():
                     """
                     INSERT INTO users (id, email, password_hash, first_name, last_name, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, email, first_name, last_name, created_at, updated_at
+                    RETURNING id, email, first_name, last_name, is_admin, created_at, updated_at
                     """,
                     (user_id, validated_data['email'], password_hash, validated_data['first_name'], validated_data['last_name'], now, now)
                 )
@@ -55,6 +55,7 @@ def register():
             'email': user_row['email'],
             'first_name': user_row['first_name'],
             'last_name': user_row['last_name'],
+            'is_admin': user_row.get('is_admin', False),
             'created_at': user_row['created_at'].isoformat() if user_row['created_at'] else None,
             'updated_at': user_row['updated_at'].isoformat() if user_row['updated_at'] else None,
         }, 'access_token': access_token}), 201
@@ -76,7 +77,7 @@ def login():
             return jsonify({'error': 'Validation error', 'details': err.messages}), 400
         
         with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, email, password_hash, first_name, last_name, created_at, updated_at FROM users WHERE email = %s", (validated_data['email'],))
+            cur.execute("SELECT id, email, password_hash, first_name, last_name, is_admin, created_at, updated_at FROM users WHERE email = %s", (validated_data['email'],))
             user = cur.fetchone()
         if not user or not bcrypt.check_password_hash(user['password_hash'], validated_data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
@@ -86,6 +87,7 @@ def login():
             'email': user['email'],
             'first_name': user['first_name'],
             'last_name': user['last_name'],
+            'is_admin': user.get('is_admin', False),
             'created_at': user['created_at'].isoformat() if user['created_at'] else None,
             'updated_at': user['updated_at'].isoformat() if user['updated_at'] else None,
         }, 'access_token': access_token}), 200
@@ -101,7 +103,7 @@ def get_current_user():
     try:
         user_id = get_jwt_identity()
         with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, email, first_name, last_name, created_at, updated_at FROM users WHERE id = %s", (user_id,))
+            cur.execute("SELECT id, email, first_name, last_name, is_admin, created_at, updated_at FROM users WHERE id = %s", (user_id,))
             user = cur.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -110,6 +112,7 @@ def get_current_user():
             'email': user['email'],
             'first_name': user['first_name'],
             'last_name': user['last_name'],
+            'is_admin': user.get('is_admin', False),
             'created_at': user['created_at'].isoformat() if user['created_at'] else None,
             'updated_at': user['updated_at'].isoformat() if user['updated_at'] else None,
         }}), 200

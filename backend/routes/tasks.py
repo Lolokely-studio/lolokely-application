@@ -13,6 +13,23 @@ task_schema = TaskSchema()
 subtask_schema = SubtaskSchema()
 
 
+def create_notification(cur, user_id, type, message, related_task_id=None, related_subtask_id=None, created_by_user_id=None):
+    """Helper function to create a notification using the existing cursor"""
+    try:
+        cur.execute(
+            """
+            INSERT INTO notifications (id, user_id, type, message, related_task_id, related_subtask_id, created_by_user_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (str(uuid.uuid4()), user_id, type, message, related_task_id, related_subtask_id, created_by_user_id)
+        )
+    except Exception as e:
+        print(f"Error creating notification: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Don't fail the request if notification creation fails
+
+
 @tasks_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_tasks():
@@ -153,10 +170,25 @@ def create_task():
                     ),
                 )
                 task = cur.fetchone()
-                cur.execute(
-                    "INSERT INTO task_assignments (id, task_id, user_id, assigned_at) VALUES (%s, %s, %s, %s)",
-                    (str(uuid.uuid4()), task['id'], user_id, now),
-                )
+                
+                # Get creator's name for notification
+                cur.execute("SELECT first_name, last_name FROM users WHERE id = %s", (user_id,))
+                creator = cur.fetchone()
+                creator_name = f"{creator['first_name']} {creator['last_name']}" if creator else "A user"
+                
+                # Create notifications for all users (except the creator)
+                cur.execute("SELECT id FROM users WHERE id != %s", (user_id,))
+                all_users = cur.fetchall()
+                for user in all_users:
+                    create_notification(
+                        cur,
+                        user['id'],
+                        'task_created',
+                        f"{creator_name} created a new task: {validated_data['title']}",
+                        related_task_id=task_id,
+                        created_by_user_id=user_id
+                    )
+                
                 conn.commit()
         return jsonify({'message': 'Task created successfully', 'task': {
             'id': task['id'],
@@ -478,6 +510,15 @@ def assign_task(task_id):
                 if not cur.fetchone():
                     return jsonify({'error': 'Task not found'}), 404
                 
+                # Get task title and assigner name for notifications
+                cur.execute("SELECT title FROM tasks WHERE id = %s", (task_id,))
+                task = cur.fetchone()
+                task_title = task[0] if task and task[0] else 'Task'
+                
+                cur.execute("SELECT first_name, last_name FROM users WHERE id = %s", (user_id,))
+                assigner = cur.fetchone()
+                assigner_name = f"{assigner[0]} {assigner[1]}" if assigner and assigner[0] and assigner[1] else "A user"
+                
                 # Remove existing assignments and add new ones
                 cur.execute("DELETE FROM task_assignments WHERE task_id = %s", (task_id,))
                 now = datetime.utcnow()
@@ -485,6 +526,15 @@ def assign_task(task_id):
                     cur.execute(
                         "INSERT INTO task_assignments (id, task_id, user_id, assigned_at) VALUES (%s, %s, %s, %s)",
                         (str(uuid.uuid4()), task_id, uid, now),
+                    )
+                    # Create notification for assigned user
+                    create_notification(
+                        cur,
+                        uid,
+                        'task_assigned',
+                        f"{assigner_name} assigned you to task: {task_title}",
+                        related_task_id=task_id,
+                        created_by_user_id=user_id
                     )
                 conn.commit()
         return jsonify({'message': 'Task assigned successfully'}), 200
@@ -508,6 +558,16 @@ def assign_subtask(subtask_id):
                 if not cur.fetchone():
                     return jsonify({'error': 'Subtask not found'}), 404
                 
+                # Get subtask title, task_id, and assigner name for notifications
+                cur.execute("SELECT title, task_id FROM subtasks WHERE id = %s", (subtask_id,))
+                subtask = cur.fetchone()
+                subtask_title = subtask[0] if subtask and subtask[0] else 'Subtask'
+                parent_task_id = subtask[1] if subtask and len(subtask) > 1 else None
+                
+                cur.execute("SELECT first_name, last_name FROM users WHERE id = %s", (user_id,))
+                assigner = cur.fetchone()
+                assigner_name = f"{assigner[0]} {assigner[1]}" if assigner and assigner[0] and assigner[1] else "A user"
+                
                 # Remove existing assignments and add new ones
                 cur.execute("DELETE FROM subtask_assignments WHERE subtask_id = %s", (subtask_id,))
                 now = datetime.utcnow()
@@ -515,6 +575,16 @@ def assign_subtask(subtask_id):
                     cur.execute(
                         "INSERT INTO subtask_assignments (id, subtask_id, user_id, assigned_at) VALUES (%s, %s, %s, %s)",
                         (str(uuid.uuid4()), subtask_id, uid, now),
+                    )
+                    # Create notification for assigned user
+                    create_notification(
+                        cur,
+                        uid,
+                        'subtask_assigned',
+                        f"{assigner_name} assigned you to subtask: {subtask_title}",
+                        related_task_id=parent_task_id,
+                        related_subtask_id=subtask_id,
+                        created_by_user_id=user_id
                     )
                 conn.commit()
         return jsonify({'message': 'Subtask assigned successfully'}), 200

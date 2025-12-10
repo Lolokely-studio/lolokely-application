@@ -11,7 +11,9 @@ import {
   Menu, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -46,7 +48,14 @@ const Navbar = () => {
     { path: '/jobs', label: 'Jobs', icon: Briefcase },
     { path: '/posts', label: 'Post Generator', icon: FileText },
     { path: '/posts/history', label: 'Post History', icon: History },
+    { path: '/leaves', label: 'Leave Calendar', icon: Calendar },
+    { path: '/leaves/my-requests', label: 'My Leaves', icon: Calendar },
   ];
+
+  // Add admin-only items
+  if (user?.is_admin) {
+    navItems.push({ path: '/leaves/approval', label: 'Approve Leaves', icon: CheckCircle });
+  }
 
   const toggleMobileMenu = () => {
     setIsMobileOpen(!isMobileOpen);
