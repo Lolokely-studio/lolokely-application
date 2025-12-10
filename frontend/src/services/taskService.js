@@ -118,4 +118,9 @@ export const leaveService = {
     const response = await api.put(`/leaves/${leaveId}/approve`, approvalData);
     return response.data;
   },
+
+  async getLeaveHistory() {
+    const response = await api.get('/leaves/history');
+    return response.data;
+  },
 };

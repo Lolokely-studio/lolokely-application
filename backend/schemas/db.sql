@@ -92,10 +92,11 @@ create table if not exists public.user_post_preferences (
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
-  type varchar(50) not null check (type in ('task_created', 'task_assigned', 'subtask_assigned')),
+  type varchar(50) not null check (type in ('task_created', 'task_assigned', 'subtask_assigned', 'leave_requested', 'leave_approved', 'leave_rejected')),
   message text not null,
   related_task_id uuid references public.tasks(id) on delete cascade,
   related_subtask_id uuid references public.subtasks(id) on delete cascade,
+  related_leave_request_id uuid references public.leave_requests(id) on delete cascade,
   created_by_user_id uuid references public.users(id) on delete set null,
   is_read boolean not null default false,
   created_at timestamptz default now()
