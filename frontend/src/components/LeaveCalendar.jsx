@@ -64,9 +64,33 @@ const LeaveCalendar = () => {
 
   const getLeavesForDate = (date) => {
     return leaveRequests.filter(leave => {
-      const start = new Date(leave.start_date);
-      const end = new Date(leave.end_date);
-      return date >= start && date <= end;
+      // Normalize dates to compare only date part (no time, no timezone)
+      // Get date components in local timezone
+      const dateYear = date.getFullYear();
+      const dateMonth = date.getMonth();
+      const dateDay = date.getDate();
+      
+      // Parse leave dates - they come as "YYYY-MM-DD" strings
+      const startParts = leave.start_date.split('-');
+      const endParts = leave.end_date.split('-');
+      const startYear = parseInt(startParts[0], 10);
+      const startMonth = parseInt(startParts[1], 10) - 1; // Month is 0-indexed
+      const startDay = parseInt(startParts[2], 10);
+      const endYear = parseInt(endParts[0], 10);
+      const endMonth = parseInt(endParts[1], 10) - 1; // Month is 0-indexed
+      const endDay = parseInt(endParts[2], 10);
+      
+      // Create date objects for comparison (in local timezone)
+      const checkDate = new Date(dateYear, dateMonth, dateDay);
+      const startDate = new Date(startYear, startMonth, startDay);
+      const endDate = new Date(endYear, endMonth, endDay);
+      
+      // Compare dates (set time to midnight for accurate comparison)
+      checkDate.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+      
+      return checkDate >= startDate && checkDate <= endDate;
     });
   };
 
