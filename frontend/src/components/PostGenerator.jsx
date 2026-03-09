@@ -130,46 +130,46 @@ const PostGenerator = () => {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full min-h-screen w-full overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+        <header className="flex-shrink-0 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pr-14 sm:pr-16 lg:pr-24">
             <div>
-              <h1 className="text-3xl font-semibold text-foreground flex items-center gap-3">
-                <Sparkles className="h-8 w-8 text-primary-600" />
+              <h1 className="text-2xl sm:text-3xl font-semibold text-foreground flex items-center gap-2 sm:gap-3">
+                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600 shrink-0" />
                 Social Media Post Generator
               </h1>
-              <p className="mt-2 text-muted">
+              <p className="mt-1 text-sm text-muted">
                 Generate engaging social media posts for Gaming, 3D, Design, AR/VR, and more.
               </p>
             </div>
             <Link
               to="/posts/history"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-primary-500/25 bg-primary-500/10 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 hover:border-primary-500/50"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-primary-500/25 bg-primary-500/10 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 hover:border-primary-500/50 w-fit"
             >
               <History className="h-4 w-4" />
               View History
             </Link>
           </div>
-        </div>
+        </header>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-red-600">
+          <div className="flex-shrink-0 mb-4 rounded-xl border border-red-500/25 bg-red-500/10 p-3 sm:p-4 text-sm text-red-600">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-6 rounded-xl border border-green-500/25 bg-green-500/10 p-4 text-green-600">
+          <div className="flex-shrink-0 mb-4 rounded-xl border border-green-500/25 bg-green-500/10 p-3 sm:p-4 text-sm text-green-600">
             {success}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 overflow-hidden">
           {/* Form Section */}
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-primary-500/25 bg-card p-6">
-              <h2 className="mb-4 text-xl font-semibold text-foreground">Post Details</h2>
+          <div className="flex flex-col min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
+            <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
+              <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Post Details</h2>
               
               <form onSubmit={handleGenerate} className="space-y-4">
                 <div>
@@ -291,8 +291,8 @@ const PostGenerator = () => {
 
             {/* Media Upload Section */}
             {variations.length > 0 && (
-              <div className="rounded-2xl border border-primary-500/25 bg-card p-6">
-                <h2 className="mb-4 text-xl font-semibold text-foreground">Add Media</h2>
+              <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
+                <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Add Media</h2>
                 
                 {mediaPreview ? (
                   <div className="relative">
@@ -338,11 +338,11 @@ const PostGenerator = () => {
           </div>
 
           {/* Results Section */}
-          <div className="space-y-6">
+          <div className="flex flex-col min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
             {variations.length > 0 ? (
               <>
-                <div className="rounded-2xl border border-primary-500/25 bg-card p-6">
-                  <h2 className="mb-4 text-xl font-semibold text-foreground">
+                <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
+                  <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">
                     Generated Variations
                   </h2>
                   
@@ -383,8 +383,8 @@ const PostGenerator = () => {
 
                 {/* Preview Section */}
                 {selectedVariation && (
-                  <div className="rounded-2xl border border-primary-500/25 bg-card p-6">
-                    <h2 className="mb-4 text-xl font-semibold text-foreground">Post Preview</h2>
+                  <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
+                    <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Post Preview</h2>
                     
                     <div className="mb-4 rounded-xl border border-primary-500/25 bg-background p-4">
                       {mediaPreview && (
@@ -433,13 +433,13 @@ const PostGenerator = () => {
                 )}
               </>
             ) : (
-              <div className="rounded-2xl border border-primary-500/25 bg-card p-12 text-center">
-                <Sparkles className="mx-auto mb-4 h-16 w-16 text-primary-500/60" />
-                <h3 className="mb-2 text-lg font-semibold text-foreground">
+              <div className="flex-1 min-h-[280px] flex flex-col items-center justify-center rounded-2xl border border-primary-500/25 bg-card p-8 sm:p-12 text-center">
+                <Sparkles className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 text-primary-500/60" />
+                <h3 className="mb-2 text-base sm:text-lg font-semibold text-foreground">
                   Ready to Generate
                 </h3>
-                <p className="text-muted">
-                  Fill in the form and click "Generate Posts" to create your social media post variations.
+                <p className="text-sm text-muted max-w-sm">
+                  Fill in the form and click &quot;Generate Posts&quot; to create your social media post variations.
                 </p>
               </div>
             )}
