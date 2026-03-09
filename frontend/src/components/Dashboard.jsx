@@ -4,7 +4,7 @@ import { taskService, userService } from '../services/taskService';
 import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 import UserList from './UserList';
-import { MagnifyingGlassIcon, XMarkIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, XMarkIcon, FunnelIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -17,7 +17,8 @@ const Dashboard = () => {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
   const [showGanttView, setShowGanttView] = useState(false);
 
   useEffect(() => {
@@ -141,16 +142,29 @@ const Dashboard = () => {
       filtered = filtered.filter(task => task.status === selectedStatus);
     }
 
-    // Filter by date (matches tasks with this exact due date)
-    if (selectedDate) {
-      const filterDate = new Date(selectedDate);
-      filterDate.setHours(0, 0, 0, 0);
+    // Filter by date range (tasks whose timeline overlaps the range)
+    if (dateRangeStart && dateRangeEnd) {
+      const rangeStart = new Date(dateRangeStart);
+      rangeStart.setHours(0, 0, 0, 0);
+      const rangeEnd = new Date(dateRangeEnd);
+      rangeEnd.setHours(23, 59, 59, 999);
+      if (rangeStart.getTime() > rangeEnd.getTime()) {
+        const swap = rangeStart.getTime();
+        rangeStart.setTime(rangeEnd.getTime());
+        rangeEnd.setTime(swap);
+        rangeEnd.setHours(23, 59, 59, 999);
+      }
 
-      filtered = filtered.filter(task => {
+      filtered = filtered.filter((task) => {
         if (!task.due_date) return false;
-        const taskDate = new Date(task.due_date);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate.getTime() === filterDate.getTime();
+        const taskEnd = new Date(task.due_date);
+        taskEnd.setHours(23, 59, 59, 999);
+        const taskStart = task.created_at
+          ? new Date(task.created_at)
+          : new Date(task.due_date);
+        taskStart.setHours(0, 0, 0, 0);
+        if (taskStart > taskEnd) taskStart.setTime(taskEnd.getTime());
+        return taskStart <= rangeEnd && taskEnd >= rangeStart;
       });
     }
 
@@ -186,98 +200,140 @@ const Dashboard = () => {
     }
 
     return filtered;
-  }, [tasks, searchQuery, selectedUserId, selectedPriority, selectedStatus, selectedDate]);
+  }, [tasks, searchQuery, selectedUserId, selectedPriority, selectedStatus, dateRangeStart, dateRangeEnd]);
 
   const GanttView = ({ tasks }) => {
-    const ganttTasks = useMemo(
-      () => tasks.filter((task) => task.due_date),
-      [tasks]
-    );
+    const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
+
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    const subtaskBarColors = [
+      'rgb(59 130 246)',   // blue
+      'rgb(168 85 247)',   // violet
+      'rgb(236 72 153)',   // pink
+      'rgb(234 88 12)',    // orange
+      'rgb(34 197 94)',   // emerald
+      'rgb(20 184 166)',  // teal
+      'rgb(251 146 60)',   // amber
+      'rgb(139 92 246)',   // purple
+    ];
+
+    const { rangeStart, rangeEnd, days, dayWidthPct } = useMemo(() => {
+      if (dateRangeStart && dateRangeEnd) {
+        let start = new Date(dateRangeStart);
+        start.setHours(0, 0, 0, 0);
+        let end = new Date(dateRangeEnd);
+        end.setHours(0, 0, 0, 0);
+        if (start.getTime() > end.getTime()) [start, end] = [end, start];
+        const days = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          days.push(new Date(d));
+        }
+        const numDays = Math.max(1, days.length);
+        return {
+          rangeStart: start,
+          rangeEnd: new Date(end.getTime() + oneDay - 1),
+          days,
+          dayWidthPct: 100 / numDays,
+        };
+      }
+      const anchor = new Date();
+      anchor.setHours(0, 0, 0, 0);
+      const dayOfWeek = anchor.getDay();
+      const diffToMonday = (dayOfWeek + 6) % 7;
+      const weekStart = new Date(anchor.getTime() - diffToMonday * oneDay);
+      const weekEnd = new Date(weekStart.getTime() + 6 * oneDay);
+      const days = [];
+      for (let i = 0; i <= 6; i++) {
+        days.push(new Date(weekStart.getTime() + i * oneDay));
+      }
+      return {
+        rangeStart: weekStart,
+        rangeEnd: weekEnd,
+        days,
+        dayWidthPct: 100 / 7,
+      };
+    }, [dateRangeStart, dateRangeEnd]);
+
+    const getStartEnd = (item) => {
+      const end = new Date(item.due_date);
+      end.setHours(23, 59, 59, 999);
+      const start = item.created_at
+        ? new Date(item.created_at)
+        : new Date(item.due_date);
+      start.setHours(0, 0, 0, 0);
+      if (start > end) start.setTime(end.getTime());
+      return { start, end };
+    };
+
+    const overlapsRange = (start, end) =>
+      start <= rangeEnd && end >= rangeStart;
+
+    const rangeMs = rangeEnd.getTime() - rangeStart.getTime() + oneDay;
+
+    const barStyle = (start, end) => {
+      const displayStart = new Date(Math.max(start.getTime(), rangeStart.getTime()));
+      const displayEnd = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
+      displayEnd.setHours(23, 59, 59, 999);
+      const left = ((displayStart.getTime() - rangeStart.getTime()) / rangeMs) * 100;
+      const spanMs = Math.max(displayEnd.getTime() - displayStart.getTime(), oneDay - 1);
+      const width = (spanMs / rangeMs) * 100;
+      return { left: Math.max(0, left), width: Math.min(100 - left, Math.max(4, width)) };
+    };
+
+    const ganttTasks = useMemo(() => {
+      return tasks.filter((task) => {
+        if (!task.due_date) return false;
+        const { start, end } = getStartEnd(task);
+        return overlapsRange(start, end);
+      });
+    }, [tasks, rangeStart, rangeEnd]);
+
+    const toggleExpanded = (taskId) => {
+      setExpandedTaskIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(taskId)) next.delete(taskId);
+        else next.add(taskId);
+        return next;
+      });
+    };
 
     if (ganttTasks.length === 0) {
       return (
         <div className="flex-1 flex items-center justify-center py-8 rounded-xl border divider-soft bg-surface">
           <div className="text-center px-4">
             <h3 className="text-base sm:text-lg font-semibold text-foreground">
-              No tasks with a due date
+              No tasks in this range
             </h3>
             <p className="text-sm text-muted mt-1">
-              Add due dates to tasks to see them in the Gantt view.
+              Add due dates to tasks or pick another date range.
             </p>
           </div>
         </div>
       );
     }
 
-    const timeline = useMemo(() => {
-      const oneDay = 24 * 60 * 60 * 1000;
-
-      // Anchor week on selected date if provided, otherwise on today
-      const anchor = selectedDate ? new Date(selectedDate) : new Date();
-      anchor.setHours(0, 0, 0, 0);
-
-      // Compute week start (Monday) and end (Sunday)
-      const dayOfWeek = anchor.getDay(); // 0 = Sunday, 1 = Monday, ...
-      const diffToMonday = (dayOfWeek + 6) % 7; // 0 for Monday
-      const weekStart = new Date(anchor.getTime() - diffToMonday * oneDay);
-      const weekEnd = new Date(weekStart.getTime() + 6 * oneDay);
-
-      const parsedDates = ganttTasks
-        .map((task) => ({
-          task,
-          date: new Date(task.due_date),
-        }))
-        .filter(({ date }) => {
-          const d = new Date(date);
-          d.setHours(0, 0, 0, 0);
-          return d >= weekStart && d <= weekEnd;
-        });
-
-      const totalDays = 6; // fixed 7-day window
-
-      const days = [];
-      for (let i = 0; i <= totalDays; i++) {
-        const d = new Date(weekStart.getTime() + i * oneDay);
-        days.push(d);
-      }
-
-      return { oneDay, minDate: weekStart, maxDate: weekEnd, totalDays, days, parsedDates, weekStart, weekEnd };
-    }, [ganttTasks, selectedDate]);
-
-    const { oneDay, minDate, totalDays, days, parsedDates, weekStart, weekEnd } = timeline;
-
-    const dayWidthPct = 100 / Math.max(1, totalDays + 1);
-
     return (
       <div className="flex-1 min-h-0 flex flex-col rounded-xl border divider-soft bg-surface/60 overflow-hidden">
-        {/* Timeline header */}
-        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft flex items-center justify-between">
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft flex items-center justify-between shrink-0">
           <span className="text-xs sm:text-sm font-semibold text-foreground">
             Gantt View
           </span>
           <span className="text-[10px] sm:text-xs text-muted">
-            Week of{' '}
-            {weekStart.toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-            })}{' '}
-            -{' '}
-            {weekEnd.toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-            })}
+            {rangeStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
+            {rangeEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </span>
         </div>
 
         <div className="flex-1 min-h-0 overflow-auto">
-          <div className="min-w-[640px] px-3 sm:px-4 py-3 space-y-3">
+          <div className="min-w-[640px] px-3 sm:px-4 py-3 space-y-1">
             {/* Date scale */}
-            <div className="pl-32 sm:pl-40">
+            <div className="pl-36 sm:pl-44">
               <div className="relative h-8 border-b border-border/60">
-                {days.map((date, index) => {
+                {days.map((date) => {
+                  const isToday = new Date().toDateString() === date.toDateString();
+                  const index = days.indexOf(date);
                   const left = index * dayWidthPct;
-                  const isToday =
-                    new Date().toDateString() === date.toDateString();
                   return (
                     <div
                       key={date.toISOString()}
@@ -298,47 +354,103 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Task rows */}
-            <div className="space-y-2">
-              {parsedDates.length === 0 && (
-                <p className="text-xs sm:text-sm text-muted pl-32 sm:pl-40">
-                  No tasks in this week. Adjust the date filter above or add due dates.
-                </p>
-              )}
-              {parsedDates.map(({ task, date }) => {
-                const offsetDays = Math.max(
-                  0,
-                  Math.round(
-                    (date.getTime() - minDate.getTime()) / oneDay
-                  )
-                );
-                const left = offsetDays * dayWidthPct;
-                const width = Math.max(dayWidthPct * 0.7, 6);
+            {/* Task and subtask rows */}
+            <div className="space-y-1">
+              {ganttTasks.map((task) => {
+                const { start: taskStart, end: taskEnd } = getStartEnd(task);
+                const taskBar = barStyle(taskStart, taskEnd);
+                const hasSubtasks = task.subtasks?.length > 0;
+                const isExpanded = expandedTaskIds.has(task.id);
+                const subtasksInRange =
+                  (task.subtasks || []).filter((st) => {
+                    if (!st.due_date) return false;
+                    const { start, end } = getStartEnd(st);
+                    return overlapsRange(start, end);
+                  });
 
                 return (
-                  <div
-                    key={task.id}
-                    className="flex items-center gap-2 sm:gap-3"
-                  >
-                    <div className="w-32 sm:w-40 flex flex-col">
-                      <span className="text-xs sm:text-sm font-medium text-foreground truncate">
-                        {task.title}
-                      </span>
-                      <span className="text-[10px] text-muted">
-                        {date.toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="relative h-6 rounded-full bg-slate-900/40 overflow-hidden">
-                        <div
-                          className={`absolute inset-y-0 rounded-full bg-primary-500/80`}
-                          style={{
-                            left: `${left}%`,
-                            width: `${width}%`,
-                          }}
-                        />
+                  <div key={task.id} className="space-y-1">
+                    {/* Task row */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-36 sm:w-44 flex items-center gap-1 min-w-0">
+                        {hasSubtasks ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(task.id)}
+                            className="p-0.5 rounded text-muted hover:text-foreground shrink-0"
+                            aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                          >
+                            {isExpanded ? (
+                              <ChevronDownIcon className="h-4 w-4" />
+                            ) : (
+                              <ChevronRightIcon className="h-4 w-4" />
+                            )}
+                          </button>
+                        ) : (
+                          <span className="w-5 shrink-0" />
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs sm:text-sm font-medium text-foreground truncate">
+                            {task.title}
+                          </span>
+                          <span className="text-[10px] text-muted">
+                            {task.created_at
+                              ? `${new Date(task.created_at).toLocaleDateString()} – ${new Date(task.due_date).toLocaleDateString()}`
+                              : new Date(task.due_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="relative h-6 rounded bg-muted/30 overflow-hidden">
+                          <div
+                            className="absolute inset-y-0 rounded bg-primary-500/90"
+                            style={{ left: `${taskBar.left}%`, width: `${taskBar.width}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    {/* Subtask rows (dropdown) */}
+                    {hasSubtasks && isExpanded && (
+                      <div className="space-y-1 pl-6 sm:pl-8">
+                        {subtasksInRange.length === 0 ? (
+                          <p className="text-[10px] text-muted py-1">No subtasks in this range</p>
+                        ) : (
+                          subtasksInRange.map((subtask, stIndex) => {
+                            const { start: stStart, end: stEnd } = getStartEnd(subtask);
+                            const stBar = barStyle(stStart, stEnd);
+                            const barColor = subtaskBarColors[stIndex % subtaskBarColors.length];
+                            return (
+                              <div
+                                key={subtask.id}
+                                className="flex items-center gap-2 sm:gap-3"
+                              >
+                                <div className="w-32 sm:w-40 flex flex-col min-w-0 pl-5">
+                                  <span className="text-xs font-medium text-foreground/90 truncate">
+                                    {subtask.title}
+                                  </span>
+                                  <span className="text-[10px] text-muted">
+                                    {new Date(subtask.due_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="relative h-5 rounded bg-muted/20 overflow-hidden">
+                                    <div
+                                      className="absolute inset-y-0 rounded opacity-90"
+                                      style={{
+                                        left: `${stBar.left}%`,
+                                        width: `${stBar.width}%`,
+                                        backgroundColor: barColor,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -429,9 +541,19 @@ const Dashboard = () => {
                 </select>
                 <input
                   type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="input-field w-32 sm:w-36 appearance-none text-xs sm:text-sm cursor-pointer !py-2.5"
+                  value={dateRangeStart}
+                  onChange={(e) => setDateRangeStart(e.target.value)}
+                  placeholder="From"
+                  className="input-field w-28 sm:w-32 appearance-none text-xs sm:text-sm cursor-pointer !py-2.5"
+                  title="From date"
+                />
+                <input
+                  type="date"
+                  value={dateRangeEnd}
+                  onChange={(e) => setDateRangeEnd(e.target.value)}
+                  placeholder="To"
+                  className="input-field w-28 sm:w-32 appearance-none text-xs sm:text-sm cursor-pointer !py-2.5"
+                  title="To date"
                 />
                 <select
                   value={selectedStatus}
@@ -463,7 +585,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {(searchQuery || selectedUserId || selectedPriority || selectedStatus || selectedDate) && (
+            {(searchQuery || selectedUserId || selectedPriority || selectedStatus || dateRangeStart || dateRangeEnd) && (
               <div className="flex flex-wrap items-center gap-2">
                 {searchQuery && (
                   <span className="chip text-xs">
@@ -497,10 +619,14 @@ const Dashboard = () => {
                     </button>
                   </span>
                 )}
-                {selectedDate && (
+                {(dateRangeStart || dateRangeEnd) && (
                   <span className="chip text-xs">
-                    Date: {selectedDate}
-                    <button type="button" onClick={() => setSelectedDate('')} className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100">
+                    Date: {dateRangeStart || '…'} – {dateRangeEnd || '…'}
+                    <button
+                      type="button"
+                      onClick={() => { setDateRangeStart(''); setDateRangeEnd(''); }}
+                      className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[inherit] opacity-80 transition hover:opacity-100"
+                    >
                       <XMarkIcon className="h-3 w-3" />
                     </button>
                   </span>
@@ -513,7 +639,7 @@ const Dashboard = () => {
         {/* Main content: board / gantt + sidebar — fills remaining height, scrolls inside columns */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden">
           <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
-            {!showGanttView && (searchQuery || selectedUserId || selectedPriority || selectedStatus) && filteredTasks.length === 0 ? (
+            {!showGanttView && (searchQuery || selectedUserId || selectedPriority || selectedStatus || dateRangeStart || dateRangeEnd) && filteredTasks.length === 0 ? (
               <div className="flex-1 flex items-center justify-center py-8 rounded-xl border divider-soft bg-surface">
                 <div className="text-center px-4">
                   <div className="mb-3 text-4xl sm:text-5xl text-primary-500/60">🔍</div>
