@@ -110,11 +110,11 @@ const AppRoutes = () => {
       <Route
         path="/jobs"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <LayoutWrapper>
               <Jobs />
             </LayoutWrapper>
-          </ProtectedRoute>
+          </AdminRoute>
         }
       />
       <Route
