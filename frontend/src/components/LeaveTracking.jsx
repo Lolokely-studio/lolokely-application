@@ -5,7 +5,7 @@ import { CalendarIcon, PlusIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from 
 import { useAuth } from '../contexts/AuthContext';
 
 const LeaveTracking = () => {
-  const { user } = useAuth();
+  useAuth();
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

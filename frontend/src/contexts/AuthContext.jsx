@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
               user: userData,
             },
           });
-        } catch (error) {
+        } catch {
           // Token might be invalid, clear it
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -208,6 +208,7 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook exported with provider
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
