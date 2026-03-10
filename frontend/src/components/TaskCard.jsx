@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, UserPlusIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import SubtaskCard from './SubtaskCard';
 import TaskForm from './TaskForm';
 import SubtaskForm from './SubtaskForm';
@@ -22,6 +22,7 @@ const TaskCard = ({
   const [showEditForm, setShowEditForm] = useState(false);
   const [showSubtaskForm, setShowSubtaskForm] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
 
   // ✅ Status styles with theme support
   const statusOptionStyles = useMemo(
@@ -87,129 +88,136 @@ const TaskCard = ({
     onUpdate(task.id, { priority: newPriority });
   };
 
+  const subtaskCount = task.subtasks?.length ?? 0;
+
   return (
-    <div className="card">
-      <div className="mb-4 flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="mb-2 text-lg font-semibold text-foreground">
+    <div className="rounded-xl border divider-soft bg-surface p-3 shadow-sm hover:shadow-md transition-shadow">
+      {/* Compact header: title + actions */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
             {task.title}
           </h3>
-
           {task.description && (
-            <p className="mb-3 text-muted">{task.description}</p>
-          )}
-
-          {/* ✅ STATUS + PRIORITY dark mode fix */}
-          <div className="mb-3 flex items-center space-x-4">
-            {/* STATUS */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted">Status:</span>
-              <select
-                value={task.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                style={resolveStatusOptionStyle(task.status)}
-                className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="todo" style={resolveStatusOptionStyle('todo')}>To Do</option>
-                <option value="in_progress" style={resolveStatusOptionStyle('in_progress')}>In Progress</option>
-                <option value="completed" style={resolveStatusOptionStyle('completed')}>Completed</option>
-              </select>
-            </div>
-
-            {/* PRIORITY */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted">Priority:</span>
-              <select
-                value={task.priority}
-                onChange={(e) => handlePriorityChange(e.target.value)}
-                style={resolvePriorityOptionStyle(task.priority)}
-                className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-              >
-                <option value="low" style={resolvePriorityOptionStyle('low')}>Low</option>
-                <option value="medium" style={resolvePriorityOptionStyle('medium')}>Medium</option>
-                <option value="high" style={resolvePriorityOptionStyle('high')}>High</option>
-              </select>
-            </div>
-          </div>
-
-          {task.due_date && (
-            <p className="mb-3 text-sm text-muted">
-              Due: {new Date(task.due_date).toLocaleDateString()}
-            </p>
-          )}
-
-          {task.assignments?.length > 0 && (
-            <div className="mb-3">
-              <span className="mb-2 block text-sm text-muted">Assigned to:</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {task.assignments.map((assignment) => (
-                  <UserAvatar
-                    key={assignment.user_id || assignment.id}
-                    user={assignment}
-                    size="md"
-                  />
-                ))}
-              </div>
-            </div>
+            <p className="mt-1 text-xs text-muted line-clamp-2">{task.description}</p>
           )}
         </div>
-
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={() => setShowAssignModal(true)}
-            className="rounded-xl p-2 text-muted transition hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted transition hover:text-foreground hover:bg-muted/50"
             title="Assign task"
           >
-            <UserPlusIcon className="h-5 w-5" />
+            <UserPlusIcon className="h-4 w-4" />
           </button>
-
           <button
             onClick={() => setShowEditForm(true)}
-            className="rounded-xl p-2 text-muted transition hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted transition hover:text-foreground hover:bg-muted/50"
             title="Edit task"
           >
-            <PencilIcon className="h-5 w-5" />
+            <PencilIcon className="h-4 w-4" />
           </button>
-
           <button
             onClick={() => onDelete(task.id)}
-            className="rounded-xl p-2 text-muted transition hover:text-rose-500"
+            className="rounded-lg p-1.5 text-muted transition hover:text-rose-500 hover:bg-rose-500/10"
             title="Delete task"
           >
-            <TrashIcon className="h-5 w-5" />
+            <TrashIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* SUBTASKS */}
-      <div className="divider-soft border-t pt-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-medium text-foreground">Subtasks</h4>
-          <button
-            onClick={() => setShowSubtaskForm(true)}
-            className="flex items-center space-x-1 text-sm font-medium text-primary-600 transition hover:text-primary-700"
-          >
-            <PlusIcon className="h-4 w-4" />
-            <span>Add Subtask</span>
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {task.subtasks?.length > 0 ? (
-            task.subtasks.map((subtask) => (
-              <SubtaskCard
-                key={subtask.id}
-                subtask={subtask}
-                users={users}
-                onUpdate={onUpdateSubtask}
-                onDelete={onDeleteSubtask}
-                onAssign={onAssignSubtask}
+      {/* Meta row: priority, status, due date, assignees */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <select
+          value={task.priority}
+          onChange={(e) => handlePriorityChange(e.target.value)}
+          style={resolvePriorityOptionStyle(task.priority)}
+          className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+        >
+          <option value="low" style={resolvePriorityOptionStyle('low')}>Low</option>
+          <option value="medium" style={resolvePriorityOptionStyle('medium')}>Medium</option>
+          <option value="high" style={resolvePriorityOptionStyle('high')}>High</option>
+        </select>
+        <select
+          value={task.status}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          style={resolveStatusOptionStyle(task.status)}
+          className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+        >
+          <option value="todo" style={resolveStatusOptionStyle('todo')}>To Do</option>
+          <option value="in_progress" style={resolveStatusOptionStyle('in_progress')}>In Progress</option>
+          <option value="completed" style={resolveStatusOptionStyle('completed')}>Completed</option>
+        </select>
+        {task.due_date && (
+          <span className="text-[10px] text-muted">
+            Due {new Date(task.due_date).toLocaleDateString()}
+          </span>
+        )}
+        {task.assignments?.length > 0 && (
+          <div className="flex items-center -space-x-1.5 ml-auto">
+            {task.assignments.slice(0, 3).map((assignment) => (
+              <UserAvatar
+                key={assignment.user_id || assignment.id}
+                user={assignment}
+                size="sm"
               />
-            ))
+            ))}
+            {task.assignments.length > 3 && (
+              <span className="text-[10px] text-muted pl-1">+{task.assignments.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Show / Hide Subtasks toggle */}
+      <div className="mt-3 pt-3 border-t border-border/60">
+        <button
+          type="button"
+          onClick={() => setShowSubtasks((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700 transition"
+        >
+          {showSubtasks ? (
+            <ChevronDownIcon className="h-4 w-4 shrink-0" />
           ) : (
-            <p className="text-sm italic text-muted">No subtasks yet</p>
+            <ChevronRightIcon className="h-4 w-4 shrink-0" />
           )}
-        </div>
+          <span>{showSubtasks ? 'Hide Subtasks' : 'Show Subtasks'}</span>
+          {subtaskCount > 0 && (
+            <span className="text-muted font-normal">({subtaskCount})</span>
+          )}
+        </button>
+
+        {showSubtasks && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted">Subtasks</span>
+              <button
+                onClick={() => setShowSubtaskForm(true)}
+                className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Add Subtask
+              </button>
+            </div>
+            <div className="space-y-2">
+              {task.subtasks?.length > 0 ? (
+                task.subtasks.map((subtask) => (
+                  <SubtaskCard
+                    key={subtask.id}
+                    subtask={subtask}
+                    users={users}
+                    onUpdate={onUpdateSubtask}
+                    onDelete={onDeleteSubtask}
+                    onAssign={onAssignSubtask}
+                  />
+                ))
+              ) : (
+                <p className="text-xs italic text-muted py-1">No subtasks yet</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* EDIT TASK */}

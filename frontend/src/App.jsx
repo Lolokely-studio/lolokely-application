@@ -73,10 +73,10 @@ const LayoutWrapper = ({ children }) => {
   }, []);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen h-screen">
       <Navbar />
       <main 
-        className="flex-1 transition-all duration-300 min-h-screen"
+        className="flex-1 transition-all duration-300 min-h-screen h-full overflow-auto"
         style={{
           marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
         }}
@@ -110,11 +110,11 @@ const AppRoutes = () => {
       <Route
         path="/jobs"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <LayoutWrapper>
               <Jobs />
             </LayoutWrapper>
-          </ProtectedRoute>
+          </AdminRoute>
         }
       />
       <Route

@@ -6,25 +6,43 @@ from datetime import datetime
 from psycopg2.extras import RealDictCursor
 import traceback
 import os
+from pathlib import Path
 from google import genai
 from google.genai import types
+from google.genai.errors import ClientError
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from project root so GEMINI_API_KEY is found when running from backend/
+_env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(_env_path)
 
 posts_bp = Blueprint('posts', __name__)
 
-# Configure Gemini API
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+def _get_gemini_api_key():
+    """Read and normalize Gemini API key from environment."""
+    key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    if not key:
+        return None
+    key = key.strip().strip('"').strip("'")
+    return key if key else None
+
+
+# Configure Gemini API (read at import; use _get_gemini_api_key() for runtime check)
+GEMINI_API_KEY = _get_gemini_api_key()
 
 def generate_post_variations(theme, description, platform, tonality, language, target_audience):
     """Generate social media post variations using Gemini AI"""
     try:
-        if not GEMINI_API_KEY:
-            raise ValueError("Gemini API key not configured. Please set GEMINI_API_KEY in your .env file. Get your API key from https://aistudio.google.com/app/apikey")
-        
+        api_key = _get_gemini_api_key()
+        if not api_key:
+            raise ValueError(
+                "Gemini API key not configured. Set GEMINI_API_KEY in the project root .env file. "
+                "Get a key from https://aistudio.google.com/app/apikey"
+            )
+
         # Initialize Gemini client
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        client = genai.Client(api_key=api_key)
         
         system_instruction = """You are an expert Social Media Post Generator specialized in Gaming, 3D, Design, AR/VR, and engaging copywriting.
         
@@ -129,7 +147,16 @@ Return ONLY the JSON array, no additional text or explanation."""
                 result.append(str(v))
         
         return result
-        
+
+    except ClientError as e:
+        msg = str(e)
+        if "API" in msg and "key" in msg.lower():
+            raise ValueError(
+                "Invalid or expired Gemini API key. Check GEMINI_API_KEY in the project root .env, "
+                "ensure the key is valid at https://aistudio.google.com/app/apikey and that the "
+                "Generative Language API is enabled for your project."
+            ) from e
+        raise
     except Exception as e:
         print(f"Error generating post: {str(e)}")
         traceback.print_exc()
@@ -230,6 +257,14 @@ def generate_posts():
         
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+    except ClientError as e:
+        print(f"Gemini API error in generate_posts: {e}")
+        return jsonify({
+            'error': (
+                'Gemini API key is invalid or not accepted. Check GEMINI_API_KEY in the project root .env, '
+                'get a valid key from https://aistudio.google.com/app/apikey and ensure the Generative Language API is enabled.'
+            )
+        }), 503
     except Exception as e:
         print(f"Error in generate_posts: {str(e)}")
         traceback.print_exc()
