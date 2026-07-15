@@ -68,5 +68,6 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook exported with provider
 export const useTheme = () => useContext(ThemeContext);
 

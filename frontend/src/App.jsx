@@ -7,6 +7,8 @@ import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
 import Jobs from './components/Jobs';
+import CrmCompanies from './components/CrmCompanies';
+import CrmCompanyDetail from './components/CrmCompanyDetail';
 import PostGenerator from './components/PostGenerator';
 import PostHistory from './components/PostHistory';
 import LeaveCalendar from './components/LeaveCalendar';
@@ -73,10 +75,10 @@ const LayoutWrapper = ({ children }) => {
   }, []);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen h-screen">
       <Navbar />
       <main 
-        className="flex-1 transition-all duration-300 min-h-screen"
+        className="flex-1 transition-all duration-300 min-h-screen h-full overflow-auto"
         style={{
           marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
         }}
@@ -110,11 +112,31 @@ const AppRoutes = () => {
       <Route
         path="/jobs"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <LayoutWrapper>
               <Jobs />
             </LayoutWrapper>
-          </ProtectedRoute>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/crm"
+        element={
+          <AdminRoute>
+            <LayoutWrapper>
+              <CrmCompanies />
+            </LayoutWrapper>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/crm/:id"
+        element={
+          <AdminRoute>
+            <LayoutWrapper>
+              <CrmCompanyDetail />
+            </LayoutWrapper>
+          </AdminRoute>
         }
       />
       <Route

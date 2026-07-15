@@ -138,13 +138,13 @@ const NotificationBell = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-primary-500/25 bg-card shadow-lg">
-          <div className="flex items-center justify-between border-b border-primary-500/25 px-4 py-3">
-            <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+        <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-slate-700 dark:border-gray-200 bg-slate-900 dark:bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-700 dark:border-gray-200 px-4 py-3">
+            <h3 className="text-sm font-semibold text-slate-100 dark:text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-500 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium text-primary-400 hover:text-primary-300 dark:text-primary-600 dark:hover:text-primary-700 transition-colors"
               >
                 <CheckCheck className="h-3 w-3" />
                 Mark all read
@@ -155,32 +155,32 @@ const NotificationBell = () => {
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-600 border-t-primary-400 dark:border-gray-300 dark:border-t-primary-600"></div>
               </div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <Bell className="mx-auto mb-2 h-8 w-8 text-muted opacity-50" />
-                <p className="text-sm text-muted">No notifications</p>
+                <Bell className="mx-auto mb-2 h-8 w-8 text-slate-500 dark:text-gray-400" />
+                <p className="text-sm text-slate-400 dark:text-gray-600">No notifications</p>
               </div>
             ) : (
-              <div className="divide-y divider-soft">
+              <div className="divide-y divide-slate-700 dark:divide-gray-200">
                 {notifications.map((notification) => (
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full text-left px-4 py-3 transition-colors hover:bg-primary-500/10 ${
-                      !notification.is_read ? 'bg-primary-500/5' : ''
+                    className={`w-full text-left px-4 py-3 transition-colors hover:bg-white/10 dark:hover:bg-gray-100 ${
+                      !notification.is_read ? 'bg-white/5 dark:bg-primary-500/10' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`flex-shrink-0 mt-0.5 h-2 w-2 rounded-full ${
-                        !notification.is_read ? 'bg-primary-600' : 'bg-transparent'
+                        !notification.is_read ? 'bg-primary-400 dark:bg-primary-600' : 'bg-transparent'
                       }`} />
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notification.is_read ? 'font-semibold text-foreground' : 'text-muted'}`}>
+                        <p className={`text-sm ${!notification.is_read ? 'font-semibold text-slate-100 dark:text-gray-900' : 'text-slate-400 dark:text-gray-600'}`}>
                           {notification.message}
                         </p>
-                        <p className="mt-1 text-xs text-muted">
+                        <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">
                           {formatDate(notification.created_at)}
                         </p>
                       </div>
