@@ -10,6 +10,7 @@ import {
   PencilIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
+import { Skeleton } from './Skeleton';
 
 const CompanyForm = ({ company, onSubmit, onCancel, error }) => {
   const [formData, setFormData] = useState({
@@ -499,8 +500,35 @@ const CrmCompanies = () => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+          <div role="status" className="glass-card overflow-hidden rounded-2xl border border-primary-500/10">
+            <span className="sr-only">Loading…</span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-primary-500/10 text-xs font-semibold uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Domain</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <tr key={i} className="border-b border-primary-500/5">
+                      {Array.from({ length: 6 }, (_, j) => (
+                        <td key={j} className="px-4 py-3">
+                          <Skeleton className={`h-4 ${j === 0 ? 'w-40' : 'w-24'}`} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">

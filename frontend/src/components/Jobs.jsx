@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { jobService } from '../services/taskService';
 import { MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { Skeleton, SkeletonText, SkeletonCircle } from './Skeleton';
 
 const Jobs = () => {
   useAuth();
@@ -119,8 +120,31 @@ const Jobs = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-20 w-20 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+      <div className="relative z-10 min-h-screen pb-16">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-8 space-y-3">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+          </div>
+          <Skeleton className="mb-6 h-12 w-full max-w-md rounded-xl" />
+          <div role="status" className="space-y-6">
+            <span className="sr-only">Loading…</span>
+            {Array.from({ length: 5 }, (_, i) => (
+              <div
+                key={i}
+                className="glass-card rounded-2xl border border-primary-500/10 p-6"
+              >
+                <div className="flex items-start gap-3">
+                  <SkeletonCircle size="md" className="rounded-lg" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-2/3" />
+                    <SkeletonText lines={2} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

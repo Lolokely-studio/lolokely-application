@@ -13,6 +13,7 @@ import {
   TrashIcon,
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
+import { Skeleton, SkeletonText } from './Skeleton';
 
 const toDateInput = (value) => (value ? value.slice(0, 10) : '');
 const toDateTimeInput = (value) => (value ? value.slice(0, 16) : '');
@@ -591,8 +592,19 @@ const ProspectsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="prospects" />
@@ -717,8 +729,19 @@ const EmailsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="emails" />
@@ -845,8 +868,19 @@ const FinancialsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="financial records" />
@@ -960,10 +994,24 @@ const CrmCompanyDetail = () => {
 
   if (loading) {
     return (
-      <div className="relative z-10 flex min-h-screen items-center justify-center pb-16">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600 mx-auto"></div>
-          <p className="text-muted">Company detail loading…</p>
+      <div className="relative z-10 min-h-screen pb-16">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div role="status" className="space-y-6">
+            <span className="sr-only">Loading…</span>
+            <Skeleton className="h-4 w-32" />
+            <div className="space-y-3">
+              <Skeleton className="h-9 w-72 max-w-full" />
+              <SkeletonText lines={2} />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-24 rounded-xl" />
+              <Skeleton className="h-10 w-24 rounded-xl" />
+              <Skeleton className="h-10 w-28 rounded-xl" />
+            </div>
+            <div className="glass-card space-y-4 rounded-2xl border border-primary-500/10 p-6">
+              <SkeletonText lines={5} />
+            </div>
+          </div>
         </div>
       </div>
     );

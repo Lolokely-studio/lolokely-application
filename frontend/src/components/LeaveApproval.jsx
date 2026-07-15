@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { leaveService, userService } from '../services/taskService';
 import { CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon, UserIcon, History, Filter, X } from 'lucide-react';
+import { Skeleton, SkeletonText } from './Skeleton';
 
 const LeaveApproval = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -168,8 +169,20 @@ const LeaveApproval = () => {
 
   if (loading && activeTab === 'pending') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6 space-y-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <div role="status" className="space-y-4">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="glass-panel p-6 space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <SkeletonText lines={2} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -332,8 +345,14 @@ const LeaveApproval = () => {
           </div>
 
           {historyLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div role="status" className="space-y-4">
+              <span className="sr-only">Loading…</span>
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="glass-panel p-6 space-y-3">
+                  <Skeleton className="h-5 w-40" />
+                  <SkeletonText lines={2} />
+                </div>
+              ))}
             </div>
           ) : historyRequests.length === 0 ? (
             <div className="glass-panel p-12 text-center">

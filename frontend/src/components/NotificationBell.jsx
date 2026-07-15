@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Skeleton, SkeletonText } from './Skeleton';
 import { useNavigate } from 'react-router-dom';
 import { notificationService } from '../services/notificationService';
 
@@ -154,8 +155,17 @@ const NotificationBell = () => {
 
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-600 border-t-primary-400 dark:border-gray-300 dark:border-t-primary-600"></div>
+              <div role="status" className="space-y-1 px-2 py-2">
+                <span className="sr-only">Loading…</span>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div key={i} className="flex items-start gap-3 px-2 py-3">
+                    <Skeleton className="mt-1.5 h-2 w-2 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <SkeletonText lines={2} />
+                      <Skeleton className="h-2.5 w-16" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
