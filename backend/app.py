@@ -33,6 +33,10 @@ def create_app():
     from routes.posts import posts_bp
     from routes.notifications import notifications_bp
     from routes.leaves import leaves_bp
+    from routes.companies import companies_bp
+    from routes.prospects import prospects_bp
+    from routes.company_emails import company_emails_bp
+    from routes.company_financials import company_financials_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(tasks_bp, url_prefix='/api/tasks')
@@ -41,6 +45,10 @@ def create_app():
     app.register_blueprint(posts_bp, url_prefix='/api/posts')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(leaves_bp, url_prefix='/api/leaves')
+    app.register_blueprint(companies_bp, url_prefix='/api/companies')
+    app.register_blueprint(prospects_bp, url_prefix='/api/prospects')
+    app.register_blueprint(company_emails_bp, url_prefix='/api/company-emails')
+    app.register_blueprint(company_financials_bp, url_prefix='/api/company-financials')
     
     # Error handlers
     @app.errorhandler(404)

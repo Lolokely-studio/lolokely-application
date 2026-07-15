@@ -6,6 +6,7 @@ import {
   SunMedium, 
   LayoutDashboard, 
   Briefcase, 
+  Building2, 
   FileText, 
   History, 
   Menu, 
@@ -54,6 +55,7 @@ const Navbar = () => {
   // Add admin-only items
   if (user?.is_admin) {
     navItems.push({ path: '/jobs', label: 'Jobs', icon: Briefcase });
+    navItems.push({ path: '/crm', label: 'CRM', icon: Building2 });
     navItems.push({ path: '/leaves/approval', label: 'Approve Leaves', icon: CheckCircle });
   }
 
