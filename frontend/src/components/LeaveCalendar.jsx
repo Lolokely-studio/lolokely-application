@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { leaveService, userService } from '../services/taskService';
 import { ChevronLeft, ChevronRight, CalendarIcon, Filter, X } from 'lucide-react';
+import { Skeleton } from './Skeleton';
 
 const LeaveCalendar = () => {
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -131,8 +132,30 @@ const LeaveCalendar = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-48 rounded-lg" />
+        </div>
+        <div role="status" className="glass-panel p-6">
+          <span className="sr-only">Loading…</span>
+          <div className="mb-6 flex items-center justify-between">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-10 w-10 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {Array.from({ length: 7 }, (_, i) => (
+              <Skeleton key={`h-${i}`} className="h-6 w-full" />
+            ))}
+            {Array.from({ length: 35 }, (_, i) => (
+              <Skeleton key={i} className="aspect-square w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

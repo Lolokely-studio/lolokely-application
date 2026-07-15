@@ -4,6 +4,7 @@ import { taskService, userService } from '../services/taskService';
 import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 import UserList from './UserList';
+import { Skeleton, SkeletonText } from './Skeleton';
 import { MagnifyingGlassIcon, XMarkIcon, FunnelIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
@@ -463,8 +464,56 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-20 w-20 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+      <div className="relative z-10 flex flex-col h-full min-h-screen w-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-4 sm:py-5 lg:px-6">
+          <header className="flex-shrink-0 mb-3 sm:mb-4 space-y-3">
+            <Skeleton className="h-8 w-64 max-w-full" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-48 rounded-xl" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <Skeleton className="h-10 w-28 rounded-xl" />
+            </div>
+          </header>
+          <div
+            role="status"
+            className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden"
+          >
+            <span className="sr-only">Loading…</span>
+            <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {['To Do', 'In Progress', 'Completed'].map((label) => (
+                <div
+                  key={label}
+                  className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-[240px]"
+                >
+                  <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft">
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex-1 p-2 sm:p-3 space-y-2 sm:space-y-3">
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl border divider-soft bg-card p-3 space-y-2"
+                      >
+                        <Skeleton className="h-4 w-3/4" />
+                        <SkeletonText lines={2} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <aside className="flex-shrink-0 w-full lg:w-72 xl:w-80 space-y-3 rounded-xl border divider-soft bg-surface/50 p-4">
+              <Skeleton className="h-5 w-32" />
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <Skeleton className="h-3 flex-1" />
+                </div>
+              ))}
+            </aside>
+          </div>
+        </div>
       </div>
     );
   }
