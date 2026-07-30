@@ -21,6 +21,14 @@ export const companyService = {
     const response = await api.delete(`/companies/${id}`);
     return response.data;
   },
+  async getStatusCounts(params = {}) {
+    const response = await api.get('/companies/status-counts', { params });
+    return response.data;
+  },
+  async updateCompanyStatus(id, status) {
+    const response = await api.patch(`/companies/${id}/status`, { status });
+    return response.data;
+  },
 };
 
 export const prospectService = {

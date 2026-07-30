@@ -3,6 +3,7 @@ import { leaveService } from '../services/taskService';
 import LeaveRequestForm from './LeaveRequestForm';
 import { CalendarIcon, PlusIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton, SkeletonText } from './Skeleton';
 
 const LeaveTracking = () => {
   useAuth();
@@ -86,8 +87,23 @@ const LeaveTracking = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-lg" />
+        </div>
+        <div role="status" className="space-y-4">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="glass-panel p-6 space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <SkeletonText lines={2} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -4,12 +4,24 @@ from db import get_connection
 from psycopg2.extras import RealDictCursor
 from marshmallow import ValidationError
 from utils.auth_helpers import require_admin, api_error_from_exception
-from schemas.company_schema import CompanyCreateSchema, CompanyUpdateSchema
+from schemas.company_schema import (
+    COMPANY_STATUSES,
+    CompanyCreateSchema,
+    CompanyUpdateSchema,
+    CompanyStatusPatchSchema,
+)
 
 companies_bp = Blueprint('companies', __name__)
 
 company_create_schema = CompanyCreateSchema()
 company_update_schema = CompanyUpdateSchema()
+company_status_patch_schema = CompanyStatusPatchSchema()
+
+SORT_COLUMNS = {
+    'company_name': 'company_name',
+    'status': 'status',
+    'updated_at': 'updated_at',
+}
 
 # dedup_key is `GENERATED ALWAYS AS (...) STORED` in Postgres — Postgres rejects
 # any INSERT/UPDATE that targets it, even NULL, so it must never be written.
@@ -30,6 +42,31 @@ def _serialize_company(row):
     return data
 
 
+def _company_list_filters(request):
+    """Build WHERE clauses for q, country, company_type (not status)."""
+    where_clauses = []
+    params = []
+
+    q = request.args.get('q')
+    country = request.args.get('country')
+    company_type = request.args.get('company_type')
+
+    if q:
+        where_clauses.append(
+            "(company_name ILIKE %s OR domain ILIKE %s OR city ILIKE %s OR country ILIKE %s)"
+        )
+        like = f"%{q}%"
+        params.extend([like, like, like, like])
+    if country:
+        where_clauses.append("country ILIKE %s")
+        params.append(country)
+    if company_type:
+        where_clauses.append("company_type ILIKE %s")
+        params.append(company_type)
+
+    return where_clauses, params
+
+
 @companies_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_companies():
@@ -37,10 +74,7 @@ def get_companies():
     if err:
         return err
     try:
-        q = request.args.get('q')
         status = request.args.get('status')
-        country = request.args.get('country')
-        company_type = request.args.get('company_type')
 
         try:
             page = int(request.args.get('page', 1))
@@ -54,26 +88,19 @@ def get_companies():
         per_page = max(min(per_page, 100), 1)
         offset = (page - 1) * per_page
 
-        where_clauses = []
-        params = []
-
-        if q:
-            where_clauses.append(
-                "(company_name ILIKE %s OR domain ILIKE %s OR city ILIKE %s OR country ILIKE %s)"
-            )
-            like = f"%{q}%"
-            params.extend([like, like, like, like])
+        where_clauses, params = _company_list_filters(request)
         if status:
-            where_clauses.append("status ILIKE %s")
+            if status not in COMPANY_STATUSES:
+                return jsonify({'error': 'Invalid status filter'}), 400
+            where_clauses.append("status = %s")
             params.append(status)
-        if country:
-            where_clauses.append("country ILIKE %s")
-            params.append(country)
-        if company_type:
-            where_clauses.append("company_type ILIKE %s")
-            params.append(company_type)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        sort = request.args.get('sort', 'updated_at')
+        order = request.args.get('order', 'desc').lower()
+        sort_col = SORT_COLUMNS.get(sort, 'updated_at')
+        sort_dir = 'ASC' if order == 'asc' else 'DESC'
 
         with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(f"SELECT COUNT(*) AS total FROM companies {where_sql}", params)
@@ -83,7 +110,7 @@ def get_companies():
                 f"""
                 SELECT * FROM companies
                 {where_sql}
-                ORDER BY updated_at DESC NULLS LAST, created_at DESC
+                ORDER BY {sort_col} {sort_dir} NULLS LAST, created_at DESC
                 LIMIT %s OFFSET %s
                 """,
                 params + [per_page, offset],
@@ -99,6 +126,70 @@ def get_companies():
 
     except Exception as e:
         return api_error_from_exception(e, 'get_companies')
+
+
+@companies_bp.route('/status-counts', methods=['GET'])
+@jwt_required()
+def get_company_status_counts():
+    _, err = require_admin()
+    if err:
+        return err
+    try:
+        where_clauses, params = _company_list_filters(request)
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"SELECT status, COUNT(*) AS count FROM companies {where_sql} GROUP BY status",
+                params,
+            )
+            rows = cur.fetchall()
+
+        counts = {s: 0 for s in COMPANY_STATUSES}
+        for row in rows:
+            if row['status'] in counts:
+                counts[row['status']] = row['count']
+        total = sum(counts.values())
+
+        return jsonify({'total': total, 'counts': counts}), 200
+
+    except Exception as e:
+        return api_error_from_exception(e, 'get_company_status_counts')
+
+
+@companies_bp.route('/<int:company_id>/status', methods=['PATCH'])
+@jwt_required()
+def patch_company_status(company_id):
+    _, err = require_admin()
+    if err:
+        return err
+    try:
+        try:
+            data = company_status_patch_schema.load(request.get_json() or {})
+        except ValidationError as ve:
+            return jsonify({'error': 'Validation error', 'details': ve.messages}), 400
+
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    UPDATE companies
+                    SET status = %s, updated_at = NOW()
+                    WHERE id = %s
+                    RETURNING *
+                    """,
+                    (data['status'], company_id),
+                )
+                company = cur.fetchone()
+                if not company:
+                    conn.rollback()
+                    return jsonify({'error': 'Company not found'}), 404
+                conn.commit()
+
+        return jsonify({'company': _serialize_company(company)}), 200
+
+    except Exception as e:
+        return api_error_from_exception(e, 'patch_company_status')
 
 
 @companies_bp.route('/<int:company_id>', methods=['GET'])

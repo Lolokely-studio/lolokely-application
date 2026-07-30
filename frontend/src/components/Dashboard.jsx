@@ -4,7 +4,21 @@ import { taskService, userService } from '../services/taskService';
 import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 import UserList from './UserList';
+import { Skeleton, SkeletonText } from './Skeleton';
 import { MagnifyingGlassIcon, XMarkIcon, FunnelIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const getStartEnd = (item) => {
+  const end = new Date(item.due_date);
+  end.setHours(23, 59, 59, 999);
+  const start = item.created_at
+    ? new Date(item.created_at)
+    : new Date(item.due_date);
+  start.setHours(0, 0, 0, 0);
+  if (start > end) start.setTime(end.getTime());
+  return { start, end };
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -54,7 +68,15 @@ const Dashboard = () => {
   const handleUpdateTask = async (taskId, taskData) => {
     try {
       const response = await taskService.updateTask(taskId, taskData);
-      setTasks(tasks.map(task => task.id === taskId ? response.task : task));
+      setTasks(tasks.map((task) => {
+        if (task.id !== taskId) return task;
+        return {
+          ...task,
+          ...response.task,
+          subtasks: response.task.subtasks ?? task.subtasks,
+          assignments: response.task.assignments ?? task.assignments,
+        };
+      }));
       setSelectedTask(null);
     } catch (error) {
       console.error('Error updating task:', error);
@@ -202,10 +224,8 @@ const Dashboard = () => {
     return filtered;
   }, [tasks, searchQuery, selectedUserId, selectedPriority, selectedStatus, dateRangeStart, dateRangeEnd]);
 
-  const GanttView = ({ tasks }) => {
+  const GanttView = ({ tasks, dateRangeStart, dateRangeEnd }) => {
     const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
-
-    const oneDay = 24 * 60 * 60 * 1000;
 
     const subtaskBarColors = [
       'rgb(59 130 246)',   // blue
@@ -232,7 +252,7 @@ const Dashboard = () => {
         const numDays = Math.max(1, days.length);
         return {
           rangeStart: start,
-          rangeEnd: new Date(end.getTime() + oneDay - 1),
+          rangeEnd: new Date(end.getTime() + ONE_DAY_MS - 1),
           days,
           dayWidthPct: 100 / numDays,
         };
@@ -241,11 +261,11 @@ const Dashboard = () => {
       anchor.setHours(0, 0, 0, 0);
       const dayOfWeek = anchor.getDay();
       const diffToMonday = (dayOfWeek + 6) % 7;
-      const weekStart = new Date(anchor.getTime() - diffToMonday * oneDay);
-      const weekEnd = new Date(weekStart.getTime() + 6 * oneDay);
+      const weekStart = new Date(anchor.getTime() - diffToMonday * ONE_DAY_MS);
+      const weekEnd = new Date(weekStart.getTime() + 6 * ONE_DAY_MS);
       const days = [];
       for (let i = 0; i <= 6; i++) {
-        days.push(new Date(weekStart.getTime() + i * oneDay));
+        days.push(new Date(weekStart.getTime() + i * ONE_DAY_MS));
       }
       return {
         rangeStart: weekStart,
@@ -255,28 +275,17 @@ const Dashboard = () => {
       };
     }, [dateRangeStart, dateRangeEnd]);
 
-    const getStartEnd = (item) => {
-      const end = new Date(item.due_date);
-      end.setHours(23, 59, 59, 999);
-      const start = item.created_at
-        ? new Date(item.created_at)
-        : new Date(item.due_date);
-      start.setHours(0, 0, 0, 0);
-      if (start > end) start.setTime(end.getTime());
-      return { start, end };
-    };
-
     const overlapsRange = (start, end) =>
       start <= rangeEnd && end >= rangeStart;
 
-    const rangeMs = rangeEnd.getTime() - rangeStart.getTime() + oneDay;
+    const rangeMs = rangeEnd.getTime() - rangeStart.getTime() + ONE_DAY_MS;
 
     const barStyle = (start, end) => {
       const displayStart = new Date(Math.max(start.getTime(), rangeStart.getTime()));
       const displayEnd = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
       displayEnd.setHours(23, 59, 59, 999);
       const left = ((displayStart.getTime() - rangeStart.getTime()) / rangeMs) * 100;
-      const spanMs = Math.max(displayEnd.getTime() - displayStart.getTime(), oneDay - 1);
+      const spanMs = Math.max(displayEnd.getTime() - displayStart.getTime(), ONE_DAY_MS - 1);
       const width = (spanMs / rangeMs) * 100;
       return { left: Math.max(0, left), width: Math.min(100 - left, Math.max(4, width)) };
     };
@@ -285,7 +294,7 @@ const Dashboard = () => {
       return tasks.filter((task) => {
         if (!task.due_date) return false;
         const { start, end } = getStartEnd(task);
-        return overlapsRange(start, end);
+        return start <= rangeEnd && end >= rangeStart;
       });
     }, [tasks, rangeStart, rangeEnd]);
 
@@ -463,8 +472,56 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-20 w-20 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+      <div className="relative z-10 flex flex-col h-full min-h-screen w-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-4 sm:py-5 lg:px-6">
+          <header className="flex-shrink-0 mb-3 sm:mb-4 space-y-3">
+            <Skeleton className="h-8 w-64 max-w-full" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-48 rounded-xl" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <Skeleton className="h-10 w-28 rounded-xl" />
+            </div>
+          </header>
+          <div
+            role="status"
+            className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden"
+          >
+            <span className="sr-only">Loading…</span>
+            <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {['To Do', 'In Progress', 'Completed'].map((label) => (
+                <div
+                  key={label}
+                  className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-[240px]"
+                >
+                  <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft">
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex-1 p-2 sm:p-3 space-y-2 sm:space-y-3">
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl border divider-soft bg-card p-3 space-y-2"
+                      >
+                        <Skeleton className="h-4 w-3/4" />
+                        <SkeletonText lines={2} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <aside className="flex-shrink-0 w-full lg:w-72 xl:w-80 space-y-3 rounded-xl border divider-soft bg-surface/50 p-4">
+              <Skeleton className="h-5 w-32" />
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <Skeleton className="h-3 flex-1" />
+                </div>
+              ))}
+            </aside>
+          </div>
+        </div>
       </div>
     );
   }
@@ -656,7 +713,11 @@ const Dashboard = () => {
                 </div>
               </div>
             ) : showGanttView ? (
-              <GanttView tasks={filteredTasks} />
+              <GanttView
+                tasks={filteredTasks}
+                dateRangeStart={dateRangeStart}
+                dateRangeEnd={dateRangeEnd}
+              />
             ) : (
               <>
                 {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (

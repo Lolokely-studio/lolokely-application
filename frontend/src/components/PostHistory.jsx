@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { postService } from '../services/postService';
 import { History, Copy, Calendar, Globe, MessageSquare, Sparkles, Eye, EyeOff } from 'lucide-react';
 import UserAvatar from './UserAvatar';
+import { Skeleton, SkeletonText, SkeletonCircle } from './Skeleton';
 
 const PostHistory = () => {
   const [posts, setPosts] = useState([]);
@@ -65,8 +66,28 @@ const PostHistory = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-8 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 space-y-3">
+            <Skeleton className="h-9 w-56" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <div role="status" className="grid grid-cols-1 gap-6">
+            <span className="sr-only">Loading…</span>
+            {Array.from({ length: 4 }, (_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-primary-500/25 bg-card p-6 space-y-4"
+              >
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-48" />
+                  <SkeletonCircle size="sm" />
+                </div>
+                <SkeletonText lines={3} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

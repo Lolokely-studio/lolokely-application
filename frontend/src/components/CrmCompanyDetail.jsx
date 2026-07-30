@@ -13,6 +13,11 @@ import {
   TrashIcon,
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
+import { Skeleton, SkeletonText } from './Skeleton';
+import StatusSelect from './crm/StatusSelect';
+import StatusBadge from './crm/StatusBadge';
+import CompanyAvatar from './crm/CompanyAvatar';
+import PipelineStepper from './crm/PipelineStepper';
 
 const toDateInput = (value) => (value ? value.slice(0, 10) : '');
 const toDateTimeInput = (value) => (value ? value.slice(0, 16) : '');
@@ -81,7 +86,7 @@ const CompanyEditForm = ({ company, onSubmit, onCancel, error }) => {
     website: company?.website || '',
     founded_year: company?.founded_year ?? '',
     company_type: company?.company_type || '',
-    status: company?.status || '',
+    status: company?.status || 'new',
     notes: company?.notes || '',
   });
 
@@ -193,12 +198,9 @@ const CompanyEditForm = ({ company, onSubmit, onCancel, error }) => {
             />
           </Field>
           <Field label="Status">
-            <input
-              type="text"
-              name="status"
+            <StatusSelect
               value={formData.status}
-              onChange={handleChange}
-              className="input-field"
+              onChange={(v) => setFormData((prev) => ({ ...prev, status: v }))}
             />
           </Field>
         </div>
@@ -591,8 +593,19 @@ const ProspectsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="prospects" />
@@ -717,8 +730,19 @@ const EmailsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="emails" />
@@ -845,8 +869,19 @@ const FinancialsTab = ({ companyId, onMutate }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600"></div>
+        <div role="status" className="space-y-3 py-2">
+          <span className="sr-only">Loading…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
+            >
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="h-4 w-1/6" />
+              <Skeleton className="ml-auto h-8 w-16 rounded-lg" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState label="financial records" />
@@ -915,6 +950,7 @@ const CrmCompanyDetail = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editError, setEditError] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [statusError, setStatusError] = useState(null);
 
   const loadCompany = useCallback(async () => {
     try {
@@ -946,6 +982,19 @@ const CrmCompanyDetail = () => {
     }
   };
 
+  const handleStatusChange = async (newStatus) => {
+    const prev = company.status;
+    setStatusError(null);
+    setCompany((c) => ({ ...c, status: newStatus }));
+    try {
+      const response = await companyService.updateCompanyStatus(companyId, newStatus);
+      setCompany(response.company);
+    } catch (error) {
+      setCompany((c) => ({ ...c, status: prev }));
+      setStatusError(error.response?.data?.error || 'Failed to update status.');
+    }
+  };
+
   const handleDelete = async () => {
     setDeleteError(null);
     if (!window.confirm(`Delete company "${company.company_name}"? This cannot be undone.`)) return;
@@ -960,10 +1009,24 @@ const CrmCompanyDetail = () => {
 
   if (loading) {
     return (
-      <div className="relative z-10 flex min-h-screen items-center justify-center pb-16">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-600 mx-auto"></div>
-          <p className="text-muted">Company detail loading…</p>
+      <div className="relative z-10 min-h-screen pb-16">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div role="status" className="space-y-6">
+            <span className="sr-only">Loading…</span>
+            <Skeleton className="h-4 w-32" />
+            <div className="space-y-3">
+              <Skeleton className="h-9 w-72 max-w-full" />
+              <SkeletonText lines={2} />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-24 rounded-xl" />
+              <Skeleton className="h-10 w-24 rounded-xl" />
+              <Skeleton className="h-10 w-28 rounded-xl" />
+            </div>
+            <div className="glass-card space-y-4 rounded-2xl border border-primary-500/10 p-6">
+              <SkeletonText lines={5} />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1001,42 +1064,57 @@ const CrmCompanyDetail = () => {
           Back to CRM
         </button>
 
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-semibold text-foreground">{company.company_name}</h1>
-              {company.status && (
-                <span className="chip bg-primary-500/15 text-primary-600 border-primary-500/25 capitalize">{company.status}</span>
-              )}
+        <div className="glass-card mb-8 rounded-2xl border border-primary-500/10 p-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-start gap-4">
+                <CompanyAvatar name={company.company_name} className="h-14 w-14 text-lg" />
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-3xl font-semibold text-foreground">{company.company_name}</h1>
+                    <StatusBadge status={company.status || 'new'} />
+                  </div>
+                  <p className="mt-2 text-muted">
+                    {company.domain}
+                    {[company.city, company.country].filter(Boolean).length > 0 &&
+                      ` · ${[company.city, company.country].filter(Boolean).join(', ')}`}
+                  </p>
+                  <div className="mt-3 max-w-xs">
+                    <StatusSelect
+                      value={company.status || 'new'}
+                      onChange={handleStatusChange}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => { setEditError(null); setShowEditForm(true); }} className="btn-secondary flex items-center gap-2">
+                  <PencilIcon className="h-4 w-4" />
+                  Edit
+                </button>
+                <button type="button" onClick={handleDelete} className="inline-flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20">
+                  <TrashIcon className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
             </div>
-            <p className="mt-2 text-muted">
-              {company.domain}
-              {[company.city, company.country].filter(Boolean).length > 0 &&
-                ` · ${[company.city, company.country].filter(Boolean).join(', ')}`}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { setEditError(null); setShowEditForm(true); }}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <PencilIcon className="h-4 w-4" />
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20"
-            >
-              <TrashIcon className="h-4 w-4" />
-              Delete
-            </button>
+
+            <PipelineStepper currentStatus={company.status || 'new'} />
+
+            <div className="flex flex-wrap gap-3 text-sm">
+              <span className="chip border border-primary-500/25 bg-primary-500/10">Emails: {company.emails_count ?? 0}</span>
+              <span className="chip border border-primary-500/25 bg-primary-500/10">Prospects: {company.prospects_count ?? 0}</span>
+              <span className="chip border border-primary-500/25 bg-primary-500/10">Financials: {company.financials_count ?? 0}</span>
+            </div>
           </div>
         </div>
 
-        {deleteError && (
-          <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{deleteError}</div>
+        {(deleteError || statusError) && (
+          <div className="mb-6 space-y-2">
+            {deleteError && <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{deleteError}</div>}
+            {statusError && <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{statusError}</div>}
+          </div>
         )}
 
         <div className="mb-6 flex flex-wrap gap-2 border-b border-primary-500/10 pb-1">
@@ -1060,55 +1138,68 @@ const CrmCompanyDetail = () => {
         </div>
 
         {activeTab === 'info' && (
-          <div className="glass-card rounded-2xl border border-primary-500/10 p-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Domain</div>
-                <div className="mt-1 text-foreground">{company.domain || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Website</div>
-                <div className="mt-1 text-foreground">
-                  {company.website ? (
-                    <a href={company.website} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline">
-                      {company.website}
-                    </a>
-                  ) : 'N/A'}
+          <div className="glass-card space-y-8 rounded-2xl border border-primary-500/10 p-6">
+            <section>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Identité</h3>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Domain</div>
+                  <div className="mt-1 text-foreground">{company.domain || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Website</div>
+                  <div className="mt-1 text-foreground">
+                    {company.website ? (
+                      <a href={company.website} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline">
+                        {company.website}
+                      </a>
+                    ) : 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Company Type</div>
+                  <div className="mt-1 capitalize text-foreground">{company.company_type || 'N/A'}</div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Country</div>
-                <div className="mt-1 text-foreground">{company.country || 'N/A'}</div>
+            </section>
+            <section>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Localisation</h3>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Country</div>
+                  <div className="mt-1 text-foreground">{company.country || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">City</div>
+                  <div className="mt-1 text-foreground">{company.city || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Region</div>
+                  <div className="mt-1 text-foreground">{company.region || 'N/A'}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">City</div>
-                <div className="mt-1 text-foreground">{company.city || 'N/A'}</div>
+            </section>
+            <section>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Suivi</h3>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Status</div>
+                  <div className="mt-1"><StatusBadge status={company.status || 'new'} /></div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Founded Year</div>
+                  <div className="mt-1 text-foreground">{company.founded_year || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Last Updated</div>
+                  <div className="mt-1 text-foreground">{company.updated_at ? new Date(company.updated_at).toLocaleString() : 'N/A'}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Region</div>
-                <div className="mt-1 text-foreground">{company.region || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Founded Year</div>
-                <div className="mt-1 text-foreground">{company.founded_year || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Company Type</div>
-                <div className="mt-1 text-foreground capitalize">{company.company_type || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Status</div>
-                <div className="mt-1 text-foreground capitalize">{company.status || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Last Updated</div>
-                <div className="mt-1 text-foreground">{company.updated_at ? new Date(company.updated_at).toLocaleString() : 'N/A'}</div>
-              </div>
-            </div>
+            </section>
             {company.notes && (
-              <div className="mt-6">
+              <div className="rounded-xl bg-[var(--surface-muted)] p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">Notes</div>
-                <p className="mt-1 whitespace-pre-wrap text-foreground">{company.notes}</p>
+                <p className="mt-2 whitespace-pre-wrap text-foreground">{company.notes}</p>
               </div>
             )}
           </div>
