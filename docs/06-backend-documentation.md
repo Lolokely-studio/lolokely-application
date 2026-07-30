@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Lolokely backend is built with **Flask**, a lightweight Python web framework. It provides a RESTful API for task management, user authentication, social media post generation, and notifications. The backend uses PostgreSQL for data persistence and integrates with Google Gemini AI for content generation.
+The Lolokely backend is built with **Flask**, a lightweight Python web framework. It provides a RESTful API for task management, user authentication, social media post generation, and notifications. The backend uses PostgreSQL for data persistence and integrates with NVIDIA LangChain (`ChatNVIDIA`) for content generation.
 
 ## Technology Stack
 
@@ -12,7 +12,7 @@ The Lolokely backend is built with **Flask**, a lightweight Python web framework
 - **Flask-Bcrypt 1.0.1**: Password hashing
 - **Marshmallow 3.20.1**: Data validation
 - **psycopg2-binary 2.9.7**: PostgreSQL adapter
-- **google-genai**: Google Gemini AI integration
+- **langchain-nvidia-ai-endpoints** / **langchain-core**: NVIDIA ChatNVIDIA integration
 - **Flask-CORS 4.0.0**: Cross-origin resource sharing
 - **python-dotenv 1.0.0**: Environment variable management
 
@@ -169,20 +169,23 @@ def get_connection():
 - `GET /api/posts/preferences`: Get user preferences
 
 **Features:**
-- Google Gemini AI integration
+- NVIDIA LangChain (ChatNVIDIA) integration with multi-model fallback
+- Optional image analysis for image-aware copy
 - Post variation generation (3 variations)
 - User preference tracking
 - Post history management
 
 **AI Integration:**
-- Uses Google Gemini 2.5 Flash model
+- Text chain: `minimaxai/minimax-m3` → `z-ai/glm-5.2` → `nvidia/nemotron-3-ultra-550b-a55b`
+- Vision: `google/diffusiongemma-26b-a4b-it` (non-blocking on failure)
 - Structured prompt engineering
 - JSON response parsing
-- Error handling and fallbacks
+- Overload-aware model fallback
 
 **Helper Functions:**
-- `generate_post_variations()`: Calls Gemini API
+- `generate_post_variations()`: Calls NVIDIA via `services.nvidia_llm`
 - `update_user_preferences()`: Updates user preferences
+- `describe_image()` / `generate_text()`: Vision caption + text fallback
 
 ### Notification Routes (`routes/notifications.py`)
 
@@ -355,32 +358,25 @@ except Exception as e:
 
 ## AI Integration
 
-### Google Gemini Integration
+### NVIDIA LangChain Integration
 
-**Configuration:**
+The post generation feature uses `langchain-nvidia-ai-endpoints`:
+
+1. **API Configuration**: `NVIDIA_API_KEY` from environment variables
+2. **Client**: `ChatNVIDIA` with multi-model text fallback and optional vision
+3. **Invocation**: `invoke()` with system + user messages (HumanMessage for images)
+4. **Response Parsing**: JSON extraction and validation (unchanged)
+5. **Error Handling**: ValueError for missing key; retry next text model on overload; 503 if all models fail
+
 ```python
-from google import genai
-from google.genai import types
+from services.nvidia_llm import describe_image, generate_text
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+analysis, image_model = describe_image(media_url)  # optional
+text, model_used = generate_text(system_instruction, prompt)
 ```
 
-**Content Generation:**
-```python
-response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    config=types.GenerateContentConfig(
-        system_instruction=system_instruction
-    ),
-    contents=prompt
-)
-```
-
-**Response Parsing:**
-- Extract JSON from response
-- Handle markdown code blocks
-- Validate response format
-- Fallback mechanisms for parsing errors
+**Pipeline (with image):** vision caption → text generation with enriched prompt.  
+**Without image / on vision failure:** text-only generation.
 
 ## Notification System
 
@@ -422,7 +418,7 @@ SECRET_KEY=your-secret-key-here
 JWT_SECRET_KEY=your-jwt-secret-key-here
 
 # AI Integration
-GEMINI_API_KEY=your_gemini_api_key_here
+NVIDIA_API_KEY=nvapi-your_key_here
 ```
 
 ## Running the Application

@@ -6,4 +6,5 @@ python-dotenv==1.0.0
 psycopg2-binary==2.9.7
 marshmallow==3.20.1
 email-validator==2.0.0
-google-genai
+langchain-nvidia-ai-endpoints
+langchain-core

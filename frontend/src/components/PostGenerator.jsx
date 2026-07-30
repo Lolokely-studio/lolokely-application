@@ -20,6 +20,9 @@ const PostGenerator = () => {
   const [success, setSuccess] = useState('');
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaType, setMediaType] = useState(null);
+  const [modelUsed, setModelUsed] = useState(null);
+  const [imageAnalysis, setImageAnalysis] = useState(null);
+  const [imageModel, setImageModel] = useState(null);
 
   const platforms = ['Instagram', 'Facebook', 'Twitter', 'LinkedIn', 'TikTok', 'YouTube'];
   const tonalities = ['Professional', 'Casual', 'Funny', 'Inspirational', 'Educational', 'Energetic'];
@@ -46,10 +49,20 @@ const PostGenerator = () => {
     setSuccess('');
     setVariations([]);
     setSelectedVariation('');
+    setModelUsed(null);
+    setImageAnalysis(null);
+    setImageModel(null);
 
     try {
-      const response = await postService.generatePosts(formData);
+      const response = await postService.generatePosts({
+        ...formData,
+        media_url: mediaPreview,
+        media_type: mediaType,
+      });
       setVariations(response.variations || []);
+      setModelUsed(response.model_used || null);
+      setImageAnalysis(response.image_analysis || null);
+      setImageModel(response.image_model || null);
       if (response.variations && response.variations.length > 0) {
         setSelectedVariation(response.variations[0]);
       }
@@ -77,6 +90,9 @@ const PostGenerator = () => {
         selected_variation: selectedVariation,
         media_url: mediaPreview,
         media_type: mediaType,
+        image_analysis: imageAnalysis,
+        generation_model: modelUsed,
+        image_model: imageModel,
       });
 
       setSuccess('Post saved successfully!');
@@ -94,6 +110,9 @@ const PostGenerator = () => {
         setSelectedVariation('');
         setMediaPreview(null);
         setMediaType(null);
+        setModelUsed(null);
+        setImageAnalysis(null);
+        setImageModel(null);
         setSuccess('');
       }, 2000);
     } catch (err) {
@@ -269,6 +288,54 @@ const PostGenerator = () => {
                   </div>
                 </div>
 
+                {/* Media Upload — before generate so image can enrich AI copy */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Media (optional)
+                  </label>
+                  {mediaPreview ? (
+                    <div className="relative">
+                      {mediaType === 'image' ? (
+                        <img
+                          src={mediaPreview}
+                          alt="Preview"
+                          className="w-full max-h-56 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <video
+                          src={mediaPreview}
+                          controls
+                          className="w-full max-h-56 rounded-xl"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={removeMedia}
+                        className="absolute top-2 right-2 rounded-full bg-red-500/90 p-2 text-white hover:bg-red-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary-500/25 bg-primary-500/5 p-6 transition hover:bg-primary-500/10">
+                      <Image className="mb-2 h-10 w-10 text-primary-500" />
+                      <span className="text-sm font-medium text-foreground">
+                        Click to upload image or video
+                      </span>
+                      <span className="mt-1 text-xs text-muted">
+                        Image is analyzed to improve post copy. Video is saved only.
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={handleMediaUpload}
+                        className="hidden"
+                        data-testid="media-upload-input"
+                      />
+                    </label>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -288,53 +355,6 @@ const PostGenerator = () => {
                 </button>
               </form>
             </div>
-
-            {/* Media Upload Section */}
-            {variations.length > 0 && (
-              <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
-                <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Add Media</h2>
-                
-                {mediaPreview ? (
-                  <div className="relative">
-                    {mediaType === 'image' ? (
-                      <img
-                        src={mediaPreview}
-                        alt="Preview"
-                        className="w-full rounded-xl object-cover"
-                      />
-                    ) : (
-                      <video
-                        src={mediaPreview}
-                        controls
-                        className="w-full rounded-xl"
-                      />
-                    )}
-                    <button
-                      onClick={removeMedia}
-                      className="absolute top-2 right-2 rounded-full bg-red-500/90 p-2 text-white hover:bg-red-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary-500/25 bg-primary-500/5 p-8 transition hover:bg-primary-500/10">
-                    <Image className="mb-2 h-12 w-12 text-primary-500" />
-                    <span className="text-sm font-medium text-foreground">
-                      Click to upload image or video
-                    </span>
-                    <span className="mt-1 text-xs text-muted">
-                      Supports JPG, PNG, GIF, MP4, MOV
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={handleMediaUpload}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Results Section */}
@@ -342,9 +362,15 @@ const PostGenerator = () => {
             {variations.length > 0 ? (
               <>
                 <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
-                  <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">
+                  <h2 className="mb-2 text-lg sm:text-xl font-semibold text-foreground">
                     Generated Variations
                   </h2>
+                  {modelUsed && (
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      Generated with {modelUsed}
+                      {imageAnalysis ? ' · image context used' : ''}
+                    </p>
+                  )}
                   
                   <div className="space-y-4">
                     {variations.map((variation, index) => (

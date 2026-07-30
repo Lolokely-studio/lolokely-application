@@ -14,7 +14,7 @@ A full-stack web application for team task management, with integrated AI-powere
 - **Due Dates**: Set and track task deadlines
 
 ### Social Media Post Generator
-- **AI-Powered Generation**: Generate engaging social media posts using Google Gemini AI
+- **AI-Powered Generation**: Generate engaging social media posts using NVIDIA LangChain models (with multi-model fallback)
 - **Multiple Variations**: Get 3 different post variations for each generation
 - **Platform Support**: Instagram, Facebook, Twitter, LinkedIn, TikTok, YouTube
 - **Customizable Tonality**: Professional, Casual, Funny, Inspirational, Educational, Energetic
@@ -37,7 +37,7 @@ A full-stack web application for team task management, with integrated AI-powere
 - **Flask-Bcrypt**: Password hashing
 - **Marshmallow**: Data validation and serialization
 - **Flask-CORS**: Cross-origin resource sharing
-- **Google Generative AI (Gemini)**: AI-powered content generation
+- **NVIDIA LangChain (ChatNVIDIA)**: AI-powered content generation with multi-model fallback
 - **python-dotenv**: Environment variable management
 - **psycopg2**: PostgreSQL adapter
 
@@ -105,9 +105,17 @@ lolokely-admin/
    SECRET_KEY=your-secret-key-here
    JWT_SECRET_KEY=your-jwt-secret-key-here
 
-   # Google Gemini API Configuration
-   # Get your API key from: https://aistudio.google.com/app/apikey
-   GEMINI_API_KEY=your_gemini_api_key_here
+   # NVIDIA API Configuration (LangChain ChatNVIDIA)
+   # Get your API key from: https://build.nvidia.com/
+   NVIDIA_API_KEY=nvapi-your_key_here
+
+   # Optional overrides
+   # NVIDIA_TEXT_MODELS=minimaxai/minimax-m3,z-ai/glm-5.2,nvidia/nemotron-3-ultra-550b-a55b
+   # NVIDIA_VISION_MODEL=google/diffusiongemma-26b-a4b-it
+   # NVIDIA_TEMPERATURE=1
+   # NVIDIA_TOP_P=1
+   # NVIDIA_MAX_TOKENS=16384
+   # NVIDIA_SEED=42
    ```
 
 5. **Initialize database:**
@@ -323,11 +331,11 @@ npm test
 
 ### Backend Deployment
 1. Set up PostgreSQL database (Supabase recommended)
-2. Configure environment variables (including `GEMINI_API_KEY`)
+2. Configure environment variables (including `NVIDIA_API_KEY`)
 3. Ensure Generative Language API is enabled in Google Cloud Console
 4. Deploy to your preferred platform (Heroku, Railway, etc.)
 
-**Note**: Make sure to add your `GEMINI_API_KEY` to the environment variables. Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+**Note**: Make sure to add your `NVIDIA_API_KEY` to the environment variables. Get your API key from [NVIDIA Build](https://build.nvidia.com/).
 
 ### Frontend Deployment
 1. Build the production bundle: `npm run build`

@@ -71,6 +71,9 @@ create table if not exists public.social_posts (
   selected_variation text,
   media_url text,
   media_type varchar(20) check (media_type in ('image', 'video', null)),
+  image_analysis text,
+  generation_model varchar(100),
+  image_model varchar(100),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
