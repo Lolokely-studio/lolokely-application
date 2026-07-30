@@ -68,7 +68,15 @@ const Dashboard = () => {
   const handleUpdateTask = async (taskId, taskData) => {
     try {
       const response = await taskService.updateTask(taskId, taskData);
-      setTasks(tasks.map(task => task.id === taskId ? response.task : task));
+      setTasks(tasks.map((task) => {
+        if (task.id !== taskId) return task;
+        return {
+          ...task,
+          ...response.task,
+          subtasks: response.task.subtasks ?? task.subtasks,
+          assignments: response.task.assignments ?? task.assignments,
+        };
+      }));
       setSelectedTask(null);
     } catch (error) {
       console.error('Error updating task:', error);
