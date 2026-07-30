@@ -7,6 +7,19 @@ import UserList from './UserList';
 import { Skeleton, SkeletonText } from './Skeleton';
 import { MagnifyingGlassIcon, XMarkIcon, FunnelIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const getStartEnd = (item) => {
+  const end = new Date(item.due_date);
+  end.setHours(23, 59, 59, 999);
+  const start = item.created_at
+    ? new Date(item.created_at)
+    : new Date(item.due_date);
+  start.setHours(0, 0, 0, 0);
+  if (start > end) start.setTime(end.getTime());
+  return { start, end };
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
@@ -203,10 +216,8 @@ const Dashboard = () => {
     return filtered;
   }, [tasks, searchQuery, selectedUserId, selectedPriority, selectedStatus, dateRangeStart, dateRangeEnd]);
 
-  const GanttView = ({ tasks }) => {
+  const GanttView = ({ tasks, dateRangeStart, dateRangeEnd }) => {
     const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
-
-    const oneDay = 24 * 60 * 60 * 1000;
 
     const subtaskBarColors = [
       'rgb(59 130 246)',   // blue
@@ -233,7 +244,7 @@ const Dashboard = () => {
         const numDays = Math.max(1, days.length);
         return {
           rangeStart: start,
-          rangeEnd: new Date(end.getTime() + oneDay - 1),
+          rangeEnd: new Date(end.getTime() + ONE_DAY_MS - 1),
           days,
           dayWidthPct: 100 / numDays,
         };
@@ -242,11 +253,11 @@ const Dashboard = () => {
       anchor.setHours(0, 0, 0, 0);
       const dayOfWeek = anchor.getDay();
       const diffToMonday = (dayOfWeek + 6) % 7;
-      const weekStart = new Date(anchor.getTime() - diffToMonday * oneDay);
-      const weekEnd = new Date(weekStart.getTime() + 6 * oneDay);
+      const weekStart = new Date(anchor.getTime() - diffToMonday * ONE_DAY_MS);
+      const weekEnd = new Date(weekStart.getTime() + 6 * ONE_DAY_MS);
       const days = [];
       for (let i = 0; i <= 6; i++) {
-        days.push(new Date(weekStart.getTime() + i * oneDay));
+        days.push(new Date(weekStart.getTime() + i * ONE_DAY_MS));
       }
       return {
         rangeStart: weekStart,
@@ -256,28 +267,17 @@ const Dashboard = () => {
       };
     }, [dateRangeStart, dateRangeEnd]);
 
-    const getStartEnd = (item) => {
-      const end = new Date(item.due_date);
-      end.setHours(23, 59, 59, 999);
-      const start = item.created_at
-        ? new Date(item.created_at)
-        : new Date(item.due_date);
-      start.setHours(0, 0, 0, 0);
-      if (start > end) start.setTime(end.getTime());
-      return { start, end };
-    };
-
     const overlapsRange = (start, end) =>
       start <= rangeEnd && end >= rangeStart;
 
-    const rangeMs = rangeEnd.getTime() - rangeStart.getTime() + oneDay;
+    const rangeMs = rangeEnd.getTime() - rangeStart.getTime() + ONE_DAY_MS;
 
     const barStyle = (start, end) => {
       const displayStart = new Date(Math.max(start.getTime(), rangeStart.getTime()));
       const displayEnd = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
       displayEnd.setHours(23, 59, 59, 999);
       const left = ((displayStart.getTime() - rangeStart.getTime()) / rangeMs) * 100;
-      const spanMs = Math.max(displayEnd.getTime() - displayStart.getTime(), oneDay - 1);
+      const spanMs = Math.max(displayEnd.getTime() - displayStart.getTime(), ONE_DAY_MS - 1);
       const width = (spanMs / rangeMs) * 100;
       return { left: Math.max(0, left), width: Math.min(100 - left, Math.max(4, width)) };
     };
@@ -286,7 +286,7 @@ const Dashboard = () => {
       return tasks.filter((task) => {
         if (!task.due_date) return false;
         const { start, end } = getStartEnd(task);
-        return overlapsRange(start, end);
+        return start <= rangeEnd && end >= rangeStart;
       });
     }, [tasks, rangeStart, rangeEnd]);
 
@@ -705,7 +705,11 @@ const Dashboard = () => {
                 </div>
               </div>
             ) : showGanttView ? (
-              <GanttView tasks={filteredTasks} />
+              <GanttView
+                tasks={filteredTasks}
+                dateRangeStart={dateRangeStart}
+                dateRangeEnd={dateRangeEnd}
+              />
             ) : (
               <>
                 {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
