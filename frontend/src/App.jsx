@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import Jobs from './components/Jobs';
 import CrmCompanies from './components/CrmCompanies';
 import CrmCompanyDetail from './components/CrmCompanyDetail';
+import AiRuns from './components/AiRuns';
 import PostGenerator from './components/PostGenerator';
 import PostHistory from './components/PostHistory';
 import LeaveCalendar from './components/LeaveCalendar';
@@ -135,6 +136,16 @@ const AppRoutes = () => {
           <AdminRoute>
             <LayoutWrapper>
               <CrmCompanyDetail />
+            </LayoutWrapper>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/ai-runs"
+        element={
+          <AdminRoute>
+            <LayoutWrapper>
+              <AiRuns />
             </LayoutWrapper>
           </AdminRoute>
         }
