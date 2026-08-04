@@ -14,9 +14,11 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@heroicons/react": "^2.2.0",
     "axios": "^1.13.0",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.548.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {

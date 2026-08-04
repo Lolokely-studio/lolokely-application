@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  CheckCircle
+  CheckCircle,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -56,6 +57,7 @@ const Navbar = () => {
   if (user?.is_admin) {
     navItems.push({ path: '/jobs', label: 'Jobs', icon: Briefcase });
     navItems.push({ path: '/crm', label: 'CRM', icon: Building2 });
+    navItems.push({ path: '/admin/ai-runs', label: 'AI Runs', icon: Activity });
     navItems.push({ path: '/leaves/approval', label: 'Approve Leaves', icon: CheckCircle });
   }
 

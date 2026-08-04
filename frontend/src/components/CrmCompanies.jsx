@@ -19,6 +19,7 @@ import StatusSelect from './crm/StatusSelect';
 import StatusFilterChips from './crm/StatusFilterChips';
 import CompanyAvatar from './crm/CompanyAvatar';
 import KanbanBoard from './crm/KanbanBoard';
+import TopCompaniesPanel from './crm/TopCompaniesPanel';
 import { CRM_VIEW_MODE_KEY } from './crm/crmConstants';
 
 const CompanyForm = ({ company, onSubmit, onCancel, error }) => {
@@ -184,6 +185,7 @@ const CrmCompanies = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [statusCounts, setStatusCounts] = useState({ counts: {}, total: 0 });
   const [viewMode, setViewMode] = useState(() => localStorage.getItem(CRM_VIEW_MODE_KEY) || 'list');
+  const [showTop10, setShowTop10] = useState(false);
   const perPage = 25;
 
   const listFilters = useMemo(
@@ -301,10 +303,15 @@ const CrmCompanies = () => {
             <h1 className="text-3xl font-semibold text-foreground">CRM</h1>
             <p className="mt-2 text-muted">Pipeline de prospection</p>
           </div>
-          <button type="button" onClick={() => { setEditingCompany(null); setFormError(null); setShowForm(true); }} className="btn-primary flex items-center gap-2 whitespace-nowrap">
-            <PlusIcon className="h-5 w-5" />
-            New Company
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" className="btn-secondary whitespace-nowrap" onClick={() => setShowTop10(true)}>
+              Top 10 à contacter
+            </button>
+            <button type="button" onClick={() => { setEditingCompany(null); setFormError(null); setShowForm(true); }} className="btn-primary flex items-center gap-2 whitespace-nowrap">
+              <PlusIcon className="h-5 w-5" />
+              New Company
+            </button>
+          </div>
         </div>
 
         {(deleteError || statusError) && (
@@ -498,6 +505,8 @@ const CrmCompanies = () => {
           </>
         )}
       </div>
+
+      <TopCompaniesPanel open={showTop10} onClose={() => setShowTop10(false)} />
 
       {showForm && (
         <CompanyForm

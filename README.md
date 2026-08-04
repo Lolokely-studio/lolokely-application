@@ -23,6 +23,11 @@ A full-stack web application for team task management, with integrated AI-powere
 - **Post History**: View and manage all generated posts with full history
 - **User Preferences**: System learns from your choices to improve suggestions
 
+### CRM AI Agents (Admin)
+- **Top 10 à contacter**: AI ranking of companies in status `new` with scores and reasons
+- **Outreach pack**: Generate a French outreach email + prestation document (markdown) from company context
+- **AI Runs**: Admin observability page (`/admin/ai-runs`) for model, duration, and status of each run
+
 ### UI/UX
 - **Modern UI**: Clean, responsive interface built with Tailwind CSS
 - **Dark/Light Theme**: Theme switching support
@@ -188,6 +193,13 @@ The frontend will be available at `http://localhost:5173`
 - `POST /api/posts/save` - Save a generated post
 - `GET /api/posts/` - Get all saved posts for current user
 - `GET /api/posts/preferences` - Get user post preferences
+
+### CRM AI (Admin)
+- `POST /api/crm-ai/suggest-top` - Rank top companies with status `new`
+- `GET /api/crm-ai/suggest-top/latest` - Last cached ranking
+- `POST /api/crm-ai/companies/<id>/outreach-pack` - Generate email + prestation markdown
+- `GET /api/crm-ai/companies/<id>/outreach-pack` - Latest outreach pack
+- `GET /api/crm-ai/runs` - List AI run observability records
 
 ## Database Schema
 
