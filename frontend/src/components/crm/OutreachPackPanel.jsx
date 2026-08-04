@@ -1,15 +1,74 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowPathIcon, ClipboardDocumentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ArrowPathIcon,
+  ClipboardDocumentIcon,
+  ArrowDownTrayIcon,
+  DocumentArrowDownIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { crmAiService } from '../../services/crmAiService';
 import { Skeleton } from '../Skeleton';
+import MarkdownViewer from './MarkdownViewer';
+
+const ConfirmRegenerateModal = ({ onConfirm, onCancel }) => {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="regenerate-pack-title"
+    >
+      <div
+        className="glass-panel mx-4 w-full max-w-md px-6 py-6 sm:px-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h2 id="regenerate-pack-title" className="text-lg font-semibold text-foreground">
+            Régénérer le pack ?
+          </h2>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-muted transition hover:text-foreground"
+            aria-label="Fermer"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+        <p className="text-sm text-muted">
+          Le contenu actuel (email + prestation) sera remplacé par une nouvelle version générée par l&apos;IA.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} className="btn-secondary">
+            Annuler
+          </button>
+          <button type="button" onClick={onConfirm} className="btn-primary">
+            Régénérer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const OutreachPackPanel = ({ companyId }) => {
   const [pack, setPack] = useState(null);
   const [tab, setTab] = useState('email');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copyHint, setCopyHint] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const pdfSourceRef = useRef(null);
 
   const loadPack = useCallback(async () => {
     setLoading(true);
@@ -33,10 +92,8 @@ const OutreachPackPanel = ({ companyId }) => {
     loadPack();
   }, [loadPack]);
 
-  const handleGenerate = async ({ confirm = false } = {}) => {
-    if (confirm && pack && !window.confirm('Régénérer le pack outreach ? Le contenu actuel sera remplacé par une nouvelle version.')) {
-      return;
-    }
+  const handleGenerate = async () => {
+    setShowConfirm(false);
     setGenerating(true);
     setError(null);
     setCopyHint(null);
@@ -49,6 +106,14 @@ const OutreachPackPanel = ({ companyId }) => {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const requestRegenerate = () => {
+    if (pack) {
+      setShowConfirm(true);
+      return;
+    }
+    handleGenerate();
   };
 
   const copyText = async (text, label) => {
@@ -72,6 +137,34 @@ const OutreachPackPanel = ({ companyId }) => {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPdf = async () => {
+    if (!pack?.proposal_markdown || !pdfSourceRef.current) return;
+    setPdfBusy(true);
+    setError(null);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const source = pdfSourceRef.current;
+      await html2pdf()
+        .set({
+          margin: [12, 12, 12, 12],
+          filename: `prestation-${companyId}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] },
+        })
+        .from(source)
+        .save();
+      setCopyHint('PDF téléchargé');
+      setTimeout(() => setCopyHint(null), 2000);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      setError('Impossible de générer le PDF.');
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   const busy = loading || generating;
 
   return (
@@ -93,7 +186,7 @@ const OutreachPackPanel = ({ companyId }) => {
           {pack ? (
             <button
               type="button"
-              onClick={() => handleGenerate({ confirm: true })}
+              onClick={requestRegenerate}
               disabled={busy}
               className="btn-secondary inline-flex items-center gap-2 disabled:opacity-50"
             >
@@ -107,7 +200,7 @@ const OutreachPackPanel = ({ companyId }) => {
           ) : (
             <button
               type="button"
-              onClick={() => handleGenerate()}
+              onClick={handleGenerate}
               disabled={busy}
               className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
             >
@@ -119,6 +212,13 @@ const OutreachPackPanel = ({ companyId }) => {
           )}
         </div>
       </div>
+
+      {showConfirm && (
+        <ConfirmRegenerateModal
+          onConfirm={handleGenerate}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
 
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">
@@ -213,10 +313,43 @@ const OutreachPackPanel = ({ companyId }) => {
                   <ArrowDownTrayIcon className="h-4 w-4" />
                   Download .md
                 </button>
+                <button
+                  type="button"
+                  className="btn-primary inline-flex items-center gap-2 text-sm disabled:opacity-50"
+                  onClick={downloadPdf}
+                  disabled={pdfBusy}
+                >
+                  {pdfBusy ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : (
+                    <DocumentArrowDownIcon className="h-4 w-4" />
+                  )}
+                  Download PDF
+                </button>
               </div>
-              <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[var(--surface-muted)] p-4 text-sm text-foreground font-sans">
-                {pack.proposal_markdown}
-              </pre>
+
+              <div className="max-h-[28rem] overflow-auto rounded-xl border border-primary-500/10 bg-[var(--surface-muted)] p-5">
+                <MarkdownViewer markdown={pack.proposal_markdown} />
+              </div>
+
+              {/* Off-screen light clone used only for PDF export */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'fixed',
+                  left: '-10000px',
+                  top: 0,
+                  width: '720px',
+                  pointerEvents: 'none',
+                }}
+              >
+                <div
+                  ref={pdfSourceRef}
+                  style={{ background: '#ffffff', color: '#0f172a', padding: '24px' }}
+                >
+                  <MarkdownViewer markdown={pack.proposal_markdown} printSafe />
+                </div>
+              </div>
             </div>
           )}
         </>
