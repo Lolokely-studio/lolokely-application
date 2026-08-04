@@ -23,7 +23,7 @@
 ### Required Accounts
 
 - **Supabase Account**: For PostgreSQL database (or self-hosted PostgreSQL)
-- **Google AI Studio Account**: For Gemini API key ([Get API Key](https://aistudio.google.com/app/apikey))
+- **NVIDIA Build Account**: For NVIDIA API key ([Get API Key](https://build.nvidia.com/))
 
 ## Local Development Setup
 
@@ -78,8 +78,9 @@ DBNAME=your_database_name
 SECRET_KEY=your-secret-key-here-change-in-production
 JWT_SECRET_KEY=your-jwt-secret-key-here-change-in-production
 
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key_here
+# NVIDIA API (LangChain ChatNVIDIA)
+NVIDIA_API_KEY=nvapi-your_key_here
+# Optional: NVIDIA_TEXT_MODELS, NVIDIA_VISION_MODEL, NVIDIA_TEMPERATURE, etc.
 ```
 
 **Generate Secret Keys:**
@@ -175,7 +176,7 @@ Expected tables:
 | `DBNAME` | Database name | Yes | `postgres` |
 | `SECRET_KEY` | Flask secret key | Yes | `generated_key` |
 | `JWT_SECRET_KEY` | JWT secret key | Yes | `generated_key` |
-| `GEMINI_API_KEY` | Google Gemini API key | Yes | `AIza...` |
+| `NVIDIA_API_KEY` | NVIDIA API Catalog key | Yes | `nvapi-...` |
 
 ### Frontend Environment Variables
 
@@ -183,13 +184,12 @@ Expected tables:
 |----------|-------------|----------|---------|
 | `VITE_API_URL` | Backend API URL | Yes | `http://localhost:5000/api` |
 
-### Getting Google Gemini API Key
+### Getting NVIDIA API Key
 
-1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the API key
-5. Add it to your `.env` file
+1. Go to [NVIDIA Build](https://build.nvidia.com/)
+2. Sign in and create an API key
+3. Copy the key (starts with `nvapi-`)
+4. Add it to your `.env` file
 
 **Note:** Keep your API key secure and never commit it to version control.
 
@@ -374,7 +374,7 @@ Set environment variables on your hosting platform:
 ```bash
 heroku config:set SECRET_KEY=your_key
 heroku config:set JWT_SECRET_KEY=your_key
-heroku config:set GEMINI_API_KEY=your_key
+heroku config:set NVIDIA_API_KEY=your_key
 ```
 
 - **Railway/Render:**
@@ -483,14 +483,14 @@ Error: Invalid token
 - Verify token is being sent in Authorization header
 - Check token expiration settings
 
-**4. Gemini API Error**
+**4. NVIDIA API Error**
 ```
-Error: Gemini API key not configured
+Error: NVIDIA API key not configured
 ```
 **Solution:**
-- Verify `GEMINI_API_KEY` in `.env`
-- Check API key is valid
-- Ensure Generative Language API is enabled
+- Verify `NVIDIA_API_KEY` in `.env`
+- Check API key is valid and starts with `nvapi-`
+- Confirm models are available on https://build.nvidia.com/
 
 #### Frontend Issues
 

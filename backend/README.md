@@ -23,9 +23,9 @@ A Flask-based REST API for task management similar to Monday.com.
    SECRET_KEY=your-secret-key-here
    JWT_SECRET_KEY=your-jwt-secret-key-here
 
-   # Google Gemini API Configuration
-   # Get your API key from: https://aistudio.google.com/app/apikey
-   GEMINI_API_KEY=your_gemini_api_key_here
+   # NVIDIA API Configuration (LangChain ChatNVIDIA)
+   # Get your API key from: https://build.nvidia.com/
+   NVIDIA_API_KEY=nvapi-your_key_here
    ```
 
 3. **Configure database (Supabase Postgres):**
