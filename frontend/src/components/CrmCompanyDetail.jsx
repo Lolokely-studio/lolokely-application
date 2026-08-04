@@ -18,6 +18,7 @@ import StatusSelect from './crm/StatusSelect';
 import StatusBadge from './crm/StatusBadge';
 import CompanyAvatar from './crm/CompanyAvatar';
 import PipelineStepper from './crm/PipelineStepper';
+import OutreachPackPanel from './crm/OutreachPackPanel';
 
 const toDateInput = (value) => (value ? value.slice(0, 10) : '');
 const toDateTimeInput = (value) => (value ? value.slice(0, 16) : '');
@@ -1116,6 +1117,8 @@ const CrmCompanyDetail = () => {
             {statusError && <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{statusError}</div>}
           </div>
         )}
+
+        <OutreachPackPanel companyId={companyId} />
 
         <div className="mb-6 flex flex-wrap gap-2 border-b border-primary-500/10 pb-1">
           {TABS.map((tab) => (
