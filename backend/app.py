@@ -37,6 +37,7 @@ def create_app():
     from routes.prospects import prospects_bp
     from routes.company_emails import company_emails_bp
     from routes.company_financials import company_financials_bp
+    from routes.crm_ai import crm_ai_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(tasks_bp, url_prefix='/api/tasks')
@@ -49,6 +50,7 @@ def create_app():
     app.register_blueprint(prospects_bp, url_prefix='/api/prospects')
     app.register_blueprint(company_emails_bp, url_prefix='/api/company-emails')
     app.register_blueprint(company_financials_bp, url_prefix='/api/company-financials')
+    app.register_blueprint(crm_ai_bp, url_prefix='/api/crm-ai')
     
     # Error handlers
     @app.errorhandler(404)
