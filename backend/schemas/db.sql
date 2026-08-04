@@ -139,3 +139,39 @@ create index if not exists idx_leave_requests_status on public.leave_requests(st
 create index if not exists idx_leave_requests_start_date on public.leave_requests(start_date);
 create index if not exists idx_leave_requests_end_date on public.leave_requests(end_date);
 create index if not exists idx_users_is_admin on public.users(is_admin);
+
+-- CRM AI: outreach packs
+create table if not exists public.outreach_packs (
+  id uuid primary key default gen_random_uuid(),
+  company_id bigint not null references public.companies(id) on delete cascade,
+  user_id uuid not null references public.users(id) on delete cascade,
+  email_subject text not null,
+  email_body text not null,
+  proposal_markdown text not null,
+  model_used varchar(100),
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_outreach_packs_company_created
+  on public.outreach_packs (company_id, created_at desc);
+
+-- CRM AI: run observability
+create table if not exists public.ai_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  run_type varchar(50) not null check (run_type in ('suggest_top', 'outreach_pack')),
+  company_id bigint references public.companies(id) on delete set null,
+  model_used varchar(100),
+  duration_ms int,
+  status varchar(20) not null check (status in ('success', 'error')),
+  input_summary jsonb default '{}'::jsonb,
+  output_summary jsonb default '{}'::jsonb,
+  error_message text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_ai_runs_created
+  on public.ai_runs (created_at desc);
+
+create index if not exists idx_ai_runs_type_created
+  on public.ai_runs (run_type, created_at desc);

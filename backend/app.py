@@ -15,15 +15,40 @@ bcrypt = Bcrypt()
 def create_app():
     app = Flask(__name__)
     
-    # Configuration
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for simplicity
+    # Configuration (secrets must come from environment)
+    secret_key = os.getenv('SECRET_KEY')
+    jwt_secret_key = os.getenv('JWT_SECRET_KEY')
+    if not secret_key or not jwt_secret_key:
+        raise RuntimeError('SECRET_KEY and JWT_SECRET_KEY must be set in the environment')
+
+    app.config['SECRET_KEY'] = secret_key
+    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+
+    # false = never expire; integer = minutes until expiry
+    expires_raw = os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 'false').strip().lower()
+    if expires_raw.isdigit():
+        from datetime import timedelta
+        app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=int(expires_raw))
+    else:
+        app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
     
     # Initialize extensions with app
     jwt.init_app(app)
     bcrypt.init_app(app)
-    CORS(app)
+
+    # CORS: allow frontend origins (comma-separated via CORS_ORIGINS)
+    cors_origins = [
+        origin.strip()
+        for origin in os.getenv('CORS_ORIGINS').split(',')
+        if origin.strip()
+    ]
+    CORS(
+        app,
+        resources={r'/api/*': {'origins': cors_origins}},
+        supports_credentials=True,
+        allow_headers=['Content-Type', 'Authorization'],
+        methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    )
     
     # Register blueprints
     from routes.auth import auth_bp
@@ -37,6 +62,7 @@ def create_app():
     from routes.prospects import prospects_bp
     from routes.company_emails import company_emails_bp
     from routes.company_financials import company_financials_bp
+    from routes.crm_ai import crm_ai_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(tasks_bp, url_prefix='/api/tasks')
@@ -49,6 +75,7 @@ def create_app():
     app.register_blueprint(prospects_bp, url_prefix='/api/prospects')
     app.register_blueprint(company_emails_bp, url_prefix='/api/company-emails')
     app.register_blueprint(company_financials_bp, url_prefix='/api/company-financials')
+    app.register_blueprint(crm_ai_bp, url_prefix='/api/crm-ai')
     
     # Error handlers
     @app.errorhandler(404)

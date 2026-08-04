@@ -187,6 +187,25 @@ def get_connection():
 - `update_user_preferences()`: Updates user preferences
 - `describe_image()` / `generate_text()`: Vision caption + text fallback
 
+### CRM AI Routes (`routes/crm_ai.py`)
+
+**Blueprint:** `crm_ai_bp` (prefix `/api/crm-ai`) — **admin only**
+
+**Endpoints:**
+- `POST /api/crm-ai/suggest-top`: Rank up to 10 companies with `status=new`
+- `GET /api/crm-ai/suggest-top/latest`: Return last successful ranking from `ai_runs`
+- `POST /api/crm-ai/companies/<id>/outreach-pack`: Generate French email + prestation markdown
+- `GET /api/crm-ai/companies/<id>/outreach-pack`: Latest pack for a company
+- `GET /api/crm-ai/runs`: Paginated AI run observability (`suggest_top` / `outreach_pack`)
+
+**Tables:**
+- `outreach_packs`: email subject/body + proposal markdown per company
+- `ai_runs`: run metadata (model, duration, status, summaries)
+
+**Services:**
+- `services/crm_tools.py`: DB candidates/context + persistence helpers
+- `services/crm_agents.py`: orchestrated ranking + outreach generation via `nvidia_llm.generate_text`
+
 ### Notification Routes (`routes/notifications.py`)
 
 **Blueprint:** `notifications_bp`
