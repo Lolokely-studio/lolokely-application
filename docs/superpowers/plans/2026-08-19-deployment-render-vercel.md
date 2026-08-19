@@ -17,7 +17,10 @@
 - Version Python : **3.11.9** exactement. Render utilise sinon Python 3.13, sur lequel `psycopg2-binary==2.9.7` n'a pas de wheel et le build échoue.
 - **Ne pas monter de version** Flask / Werkzeug / marshmallow. On verrouille l'existant tel qu'il tourne en local.
 - `DB_POOL_MAX` doit rester **≥ au nombre de threads gunicorn par worker** (psycopg2 lève `PoolError` au lieu d'attendre).
-- Le projet n'a **aucun framework de test**. Ne pas en introduire. Les vérifications sont des commandes exécutables avec sortie attendue.
+- Les tests vivent dans `backend/tests/` et tournent avec `uv run pytest` (ou `./venv/bin/python -m pytest` avant la tâche 1). `backend/tests/test_db.py` existe déjà : **14 tests, tous verts**. Ne pas le casser.
+- pytest est une dépendance **de développement uniquement**. La commande de build Render doit donc être `uv sync --frozen --no-dev`, sinon uv installe pytest en production.
+- Périmètre de test volontairement étroit : `db.py` et la configuration de `create_app()` (garde CORS, `/healthz`). **Ne pas** écrire de tests pour les routes métier ni pour les services IA — hors périmètre, voir « Stratégie de test » du spec.
+- Un test doit échouer quand on casse le comportement qu'il décrit. Après avoir écrit un test, le lancer une fois contre le code non modifié pour le voir échouer.
 - Toutes les commandes backend s'exécutent depuis `backend/`.
 - Root directory Render = `backend`, root directory Vercel = `frontend`, branche de production = `develop`.
 
@@ -76,9 +79,19 @@ dependencies = [
     "gunicorn==23.0.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+]
+
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 ```
+
+pytest est dans le groupe `dev` : il ne sera pas installé sur Render grâce au `--no-dev` de la commande de build.
 
 `package = false` indique à uv que le projet n'est pas une bibliothèque installable — le code est importé depuis le répertoire de travail, comme aujourd'hui.
 
@@ -113,18 +126,37 @@ all imports OK
 Run: `cd backend && uv run python --version`
 Expected: `Python 3.11.9`
 
-- [ ] **Step 7: Supprimer `requirements.txt`**
+- [ ] **Step 7: Vérifier que la suite de tests existante passe sous uv**
+
+Run: `cd backend && uv run pytest -q`
+Expected: `14 passed`
+
+Si pytest n'est pas trouvé, c'est que le groupe `dev` n'a pas été synchronisé : relancer `uv sync --frozen`.
+
+- [ ] **Step 8: Vérifier que `--no-dev` exclut bien pytest (ce que fera Render)**
+
+Run:
+```bash
+cd backend && uv sync --frozen --no-dev && uv run python -c "
+import importlib.util
+print('pytest absent (correct)' if importlib.util.find_spec('pytest') is None else 'ECHEC: pytest installe en prod')
+"
+uv sync --frozen
+```
+Expected: `pytest absent (correct)`, puis restauration de l'environnement complet.
+
+- [ ] **Step 9: Supprimer `requirements.txt`**
 
 Run: `cd backend && rm requirements.txt`
 
-- [ ] **Step 8: Vérifier que `.venv` n'est pas suivi par git**
+- [ ] **Step 10: Vérifier que `.venv` n'est pas suivi par git**
 
 Run: `git status --short backend/ | grep -c '.venv' || echo "0 fichier .venv suivi"`
 Expected: `0 fichier .venv suivi`
 
 Si des fichiers `.venv` apparaissent, ajouter `backend/.venv` au `.gitignore` racine (la tâche 4 le fera de toute façon, mais ne pas committer `.venv` ici).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add backend/pyproject.toml backend/uv.lock backend/.python-version
@@ -140,11 +172,12 @@ Sans objet `app` au niveau module, `gunicorn wsgi:app` échoue. On ajoute aussi 
 
 **Files:**
 - Create: `backend/wsgi.py`
+- Create: `backend/tests/test_app.py`
 - Modify: `backend/app.py` (imports + enregistrement de la route dans `create_app`)
 
 **Interfaces:**
 - Consumes: environnement uv de la tâche 1.
-- Produces: `backend/wsgi.py` exposant `app` (instance Flask). Route `GET /healthz` → `200 {"status": "ok"}`, et `GET /healthz?db=1` → `200 {"status": "ok", "db": "ok"}` ou `503 {"status": "error", "db": "<message>"}`.
+- Produces: `backend/wsgi.py` exposant `app` (instance Flask). Route `GET /healthz` → `200 {"status": "ok"}`, et `GET /healthz?db=1` → `200 {"status": "ok", "db": "ok"}` ou `503 {"status": "error", "db": "<message>"}`. Les fixtures `env` et `client` définies ici sont réutilisées par la tâche 3.
 
 - [ ] **Step 1: Créer `backend/wsgi.py`**
 
@@ -156,7 +189,85 @@ app = create_app()
 
 `app.py` conserve son bloc `if __name__ == '__main__'` : il reste le point d'entrée de développement.
 
-- [ ] **Step 2: Ajouter l'import `request` dans `backend/app.py`**
+- [ ] **Step 2: Écrire les tests qui échouent**
+
+Créer `backend/tests/test_app.py` :
+
+```python
+"""Configuration applicative : endpoint /healthz et garde CORS.
+
+Aucun de ces tests ne touche la base ni le reseau. Les variables requises
+sont posees explicitement pour que la suite tourne sans fichier .env.
+"""
+
+import contextlib
+
+import pytest
+
+import app as appmod
+
+REQUIRED_ENV = {
+    "SECRET_KEY": "test-secret",
+    "JWT_SECRET_KEY": "test-jwt-secret",
+    "CORS_ORIGINS": "http://localhost:5173",
+}
+
+
+@pytest.fixture
+def env(monkeypatch):
+    for key, value in REQUIRED_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.delenv("CORS_ALLOW_VERCEL_PREVIEWS", raising=False)
+    return monkeypatch
+
+
+@pytest.fixture
+def client(env):
+    return appmod.create_app().test_client()
+
+
+@contextlib.contextmanager
+def _unreachable_database():
+    raise RuntimeError("could not connect to server")
+    yield  # pragma: no cover
+
+
+def test_healthz_returns_ok(client):
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"status": "ok"}
+
+
+def test_healthz_does_not_touch_the_database_by_default(client, monkeypatch):
+    """Un health check qui depend de Supabase ferait redemarrer en boucle un
+    backend sain lors d'une coupure du fournisseur."""
+    import db as dbmod
+
+    monkeypatch.setattr(dbmod, "get_connection", _unreachable_database)
+
+    assert client.get("/healthz").status_code == 200
+
+
+def test_healthz_deep_check_reports_database_failure(client, monkeypatch):
+    import db as dbmod
+
+    monkeypatch.setattr(dbmod, "get_connection", _unreachable_database)
+
+    response = client.get("/healthz?db=1")
+
+    assert response.status_code == 503
+    assert response.get_json()["status"] == "error"
+```
+
+- [ ] **Step 3: Lancer les tests pour les voir échouer**
+
+Run: `cd backend && uv run pytest tests/test_app.py -q`
+Expected: 3 échecs. `test_healthz_returns_ok` échoue sur `assert 404 == 200` — la route n'existe pas encore.
+
+Si les tests **passent** à ce stade, c'est qu'une route `/healthz` existe déjà : vérifier avant de continuer.
+
+- [ ] **Step 4: Ajouter l'import `request` dans `backend/app.py`**
 
 Remplacer la ligne 1 :
 
@@ -170,7 +281,7 @@ par :
 from flask import Flask, request
 ```
 
-- [ ] **Step 3: Ajouter la route `/healthz` dans `create_app`**
+- [ ] **Step 5: Ajouter la route `/healthz` dans `create_app`**
 
 Dans `backend/app.py`, juste avant le bloc `# Error handlers`, insérer :
 
@@ -191,9 +302,16 @@ Dans `backend/app.py`, juste avant le bloc `# Error handlers`, insérer :
         return {'status': 'ok', 'db': 'ok'}, 200
 ```
 
-L'import de `db` est local à la fonction : le module ne doit pas être importé au démarrage si la configuration DB est absente.
+L'import de `db` est local à la fonction, pour deux raisons : le module ne doit pas être importé au démarrage si la configuration DB est absente, et c'est ce qui rend le `monkeypatch` des tests efficace.
 
-- [ ] **Step 4: Vérifier que l'app démarre sous gunicorn avec la commande de production**
+- [ ] **Step 6: Relancer les tests pour les voir passer**
+
+Run: `cd backend && uv run pytest -q`
+Expected: `17 passed` (14 de `test_db.py` + 3 nouveaux).
+
+- [ ] **Step 7: Vérifier le démarrage réel sous gunicorn**
+
+Les tests utilisent le test client Flask ; cette étape valide en plus la commande de production elle-même.
 
 Run (dans un terminal) :
 ```bash
@@ -202,18 +320,9 @@ cd backend && uv run gunicorn wsgi:app --bind 0.0.0.0:5000 \
 ```
 Expected: des lignes `[INFO] Booting worker with pid: ...`, sans traceback.
 
-- [ ] **Step 5: Vérifier `/healthz` (santé simple)**
+- [ ] **Step 8: Vérifier `/healthz?db=1` contre la vraie base**
 
-Run (dans un second terminal) : `curl -s -w '\n%{http_code}\n' http://localhost:5000/healthz`
-Expected:
-```
-{"status":"ok"}
-200
-```
-
-- [ ] **Step 6: Vérifier `/healthz?db=1` (santé profonde)**
-
-Run: `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
+Run (dans un second terminal) : `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
 Expected:
 ```
 {"db":"ok","status":"ok"}
@@ -222,16 +331,16 @@ Expected:
 
 Puis arrêter gunicorn (Ctrl-C).
 
-- [ ] **Step 7: Vérifier qu'aucune route n'a été touchée**
+- [ ] **Step 9: Vérifier qu'aucune route métier n'a été touchée**
 
 Run: `git status --short backend/routes backend/services backend/utils`
 Expected: aucune sortie.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add backend/wsgi.py backend/app.py
-git commit -m "feat: add WSGI entrypoint and /healthz endpoint for Render"
+git add backend/wsgi.py backend/app.py backend/tests/test_app.py
+git commit -m "feat: add WSGI entrypoint and tested /healthz endpoint for Render"
 ```
 
 ---
@@ -242,12 +351,72 @@ git commit -m "feat: add WSGI entrypoint and /healthz endpoint for Render"
 
 **Files:**
 - Modify: `backend/app.py` (import `re` + bloc CORS)
+- Modify: `backend/tests/test_app.py` (ajout des tests CORS)
 
 **Interfaces:**
-- Consumes: `create_app()` de la tâche 2.
+- Consumes: `create_app()` et les fixtures `env` / `client` de la tâche 2.
 - Produces: variable d'environnement optionnelle `CORS_ALLOW_VERCEL_PREVIEWS` (`1`/`true`/`yes` pour activer, désactivée par défaut), consommée par la tâche 6 dans `DEPLOY.md`.
 
-- [ ] **Step 1: Ajouter l'import `re` dans `backend/app.py`**
+- [ ] **Step 1: Écrire les tests qui échouent**
+
+Ajouter à la fin de `backend/tests/test_app.py` :
+
+```python
+PREVIEW_ORIGIN = "https://lolokely-git-feat-abc123.vercel.app"
+
+
+def _preflight(client, origin):
+    return client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+
+def test_missing_cors_origins_fails_fast(env):
+    env.setenv("CORS_ORIGINS", "")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_cors_origins_with_only_separators_fails_fast(env):
+    env.setenv("CORS_ORIGINS", " , , ")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_configured_origin_is_allowed(client):
+    response = _preflight(client, "http://localhost:5173")
+
+    assert response.headers.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+
+
+def test_vercel_preview_origin_is_rejected_by_default(client):
+    """Ouvrir toute la plateforme Vercel est un choix, pas un defaut."""
+    response = _preflight(client, PREVIEW_ORIGIN)
+
+    assert "Access-Control-Allow-Origin" not in response.headers
+
+
+def test_vercel_preview_origin_is_allowed_when_enabled(env):
+    env.setenv("CORS_ALLOW_VERCEL_PREVIEWS", "true")
+    client = appmod.create_app().test_client()
+
+    response = _preflight(client, PREVIEW_ORIGIN)
+
+    assert response.headers.get("Access-Control-Allow-Origin") == PREVIEW_ORIGIN
+```
+
+- [ ] **Step 2: Lancer les tests pour les voir échouer**
+
+Run: `cd backend && uv run pytest tests/test_app.py -q`
+Expected: `test_missing_cors_origins_fails_fast` échoue sur `AttributeError: 'NoneType' object has no attribute 'split'` au lieu du `RuntimeError` attendu — c'est exactement le défaut à corriger. `test_vercel_preview_origin_is_allowed_when_enabled` échoue aussi (variable non implémentée).
+
+- [ ] **Step 3: Ajouter l'import `re` dans `backend/app.py`**
 
 Après `import os`, ajouter :
 
@@ -255,7 +424,7 @@ Après `import os`, ajouter :
 import re
 ```
 
-- [ ] **Step 2: Remplacer le bloc CORS**
+- [ ] **Step 4: Remplacer le bloc CORS**
 
 Remplacer :
 
@@ -286,43 +455,22 @@ par :
         cors_origins.append(re.compile(r'^https://.*\.vercel\.app$'))
 ```
 
-- [ ] **Step 3: Vérifier l'échec explicite quand `CORS_ORIGINS` est absente**
+- [ ] **Step 5: Relancer les tests pour les voir passer**
 
-Run:
-```bash
-cd backend && CORS_ORIGINS= uv run python -c "
-from app import create_app
-try:
-    create_app()
-    print('ECHEC: aucune erreur levee')
-except RuntimeError as e:
-    print('OK ->', e)
-"
-```
-Expected: `OK -> CORS_ORIGINS must be set in the environment`
+Run: `cd backend && uv run pytest -q`
+Expected: `22 passed` (14 + 3 + 5).
 
-Le passage de `CORS_ORIGINS=` (valeur vide) suffit et évite de déplacer le `.env` : `load_dotenv()` s'exécute avec `override=False` par défaut et n'écrase pas une variable déjà présente dans l'environnement, même vide. Comportement vérifié sur ce projet.
-
-- [ ] **Step 4: Vérifier que l'app démarre normalement avec la configuration réelle**
+- [ ] **Step 6: Vérifier que l'app démarre avec la configuration réelle**
 
 Run: `cd backend && uv run python -c "from wsgi import app; print('boot OK')"`
 Expected: `boot OK`
 
-- [ ] **Step 5: Vérifier l'acceptation du motif preview**
+Cette étape utilise le `.env` local, là où les tests posent leurs propres variables — elle vérifie donc que la configuration réelle satisfait bien la nouvelle garde.
 
-Run:
-```bash
-cd backend && CORS_ALLOW_VERCEL_PREVIEWS=true uv run python -c "
-from wsgi import app
-print('boot avec previews OK')
-"
-```
-Expected: `boot avec previews OK`
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add backend/app.py
+git add backend/app.py backend/tests/test_app.py
 git commit -m "fix: fail fast on missing CORS_ORIGINS and support Vercel preview origins"
 ```
 
@@ -342,6 +490,8 @@ Aligne `.env.example` sur les noms canoniques introduits dans `db.py`, bascule v
 - Produces: la liste de référence des variables, reprise telle quelle par `DEPLOY.md` en tâche 6.
 
 - [ ] **Step 1: Corriger le `.gitignore` racine**
+
+`.pytest_cache/` a déjà été ajouté au `.gitignore` en même temps que la suite de tests. Il reste à traiter les fichiers `.env`.
 
 Remplacer la ligne `.env` par :
 
@@ -591,10 +741,12 @@ Le document doit contenir, dans cet ordre :
    | Language / Runtime | Python 3 (natif, pas Docker) |
    | Root Directory | `backend` |
    | Branch | `develop` |
-   | Build Command | `uv sync --frozen` |
+   | Build Command | `uv sync --frozen --no-dev` |
    | Start Command | `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
    | Health Check Path | `/healthz` |
    | Instance Type | Free |
+
+   Justifier `--no-dev` : pytest est une dépendance de développement ; sans ce drapeau, uv l'installe en production.
 
    Justifier `--timeout 120` : le défaut gunicorn est de 30 s et les routes `/api/crm-ai/*` appellent des modèles NVIDIA dont la latence le dépasse régulièrement — sans ce réglage le worker est tué en plein appel LLM.
 
@@ -658,16 +810,23 @@ git commit -m "docs: add Render and Vercel deployment guide"
 Run: `git diff --stat develop...HEAD -- backend/routes backend/services backend/utils`
 Expected: aucune sortie.
 
+- [ ] **La suite de tests passe**
+
+Run: `cd backend && uv run pytest -q`
+Expected: `22 passed`
+
 - [ ] **Le backend démarre exactement comme sur Render**
 
 Run:
 ```bash
-cd backend && uv sync --frozen && \
+cd backend && uv sync --frozen --no-dev && \
   PORT=5000 uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT \
   --workers 2 --threads 4 --worker-class gthread --timeout 120
 ```
 Puis : `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
 Expected: `{"db":"ok","status":"ok"}` et `200`.
+
+Après ce contrôle, restaurer l'environnement de développement avec `uv sync --frozen` (le `--no-dev` a retiré pytest).
 
 Ce test couvre aussi la garde `PORT`/`DB_PORT` : avec `PORT=5000` défini, la connexion Postgres doit continuer d'utiliser `DB_PORT` et non 5000.
 

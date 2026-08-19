@@ -18,7 +18,8 @@
 
 - Docker / `render.yaml` (blueprint) — décision prise : runtime natif. Le Dockerfile reste la porte de sortie si une dépendance système apparaît un jour.
 - Montée de version de Flask, Werkzeug ou marshmallow — on **verrouille** l'existant, on ne le modernise pas dans ce chantier.
-- CI/CD, tests automatisés, domaine custom, monitoring externe.
+- CI/CD, domaine custom, monitoring externe.
+- Tests des routes HTTP, des services IA et du frontend. Seul `db.py` est couvert — voir « Stratégie de test ».
 - Refonte des routes ou de la logique métier. Les 65 sites d'appel DB ne doivent **pas** être modifiés.
 - Migration vers un ORM ou vers le SDK Supabase.
 
@@ -32,7 +33,7 @@ Le stack n'a aucune dépendance système : `psycopg2-binary` fournit des wheels 
 GitHub (branche develop)
    │
    ├──> Render — root directory: backend/
-   │      build : uv sync --frozen
+   │      build : uv sync --frozen --no-dev
    │      start : uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT ...
    │      health: /healthz
    │        │
@@ -50,7 +51,7 @@ GitHub (branche develop)
 
 ### Problème
 
-`backend/db.py` ouvre une connexion par appel. Le repo compte **64 `with get_connection()` et zéro `conn.close()`**.
+`backend/db.py` ouvre une connexion par appel. Le repo compte **65 `with get_connection()` et zéro `conn.close()`**.
 
 En psycopg2, `with conn:` gère la **transaction** (commit en sortie normale, rollback sur exception) — il **ne ferme pas** la connexion. En local, avec le serveur de dev mono-process relancé souvent, ça ne se voit pas. Sur Render avec gunicorn multi-workers et Supabase free (60 connexions directes), la saturation arrive en quelques dizaines de requêtes : `FATAL: too many connections`.
 
@@ -85,9 +86,11 @@ Les noms canoniques deviennent donc `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_POR
 
 ### Vérification effectuée
 
-Chemins validés sur pool simulé : sortie normale → commit ; `return` anticipé → commit ; exception → rollback puis propagation ; connexion morte → fermée au lieu d'être recyclée ; les deux syntaxes d'appel réelles ; repli sur les anciens noms de variables ; garde `DB_PORT`/`RENDER`.
+Couvert par `backend/tests/test_db.py` (14 tests, pool simulé, aucun accès réseau) : sortie normale → commit ; `return` anticipé → commit ; exception → rollback puis propagation ; échec du commit → connexion tout de même rendue ; connexion morte → fermée au lieu d'être recyclée ; les deux syntaxes d'appel réelles ; précédence des noms canoniques sur les noms hérités ; garde `DB_PORT`/`RENDER` ; `sslmode` toujours à `require`.
 
-Validé également contre la base Supabase réelle : après deux emprunts successifs, le pool interne ne contient qu'**une seule connexion**, ce qui démontre la réutilisation effective et l'absence de fuite.
+La suite a été validée par mutation : suppression du commit final, suppression du `putconn`, recyclage d'une connexion morte et retrait de la garde `RENDER` font chacun échouer au moins un test. Un test qui ne tombe jamais ne protège rien.
+
+Validé en complément contre la base Supabase réelle : après deux emprunts successifs, le pool interne ne contient qu'**une seule connexion**, ce qui démontre la réutilisation effective et l'absence de fuite.
 
 ### Reste à faire sur ce bloc (configuration, pas code)
 
@@ -139,7 +142,7 @@ Versions à verrouiller — celles qui tournent en local, vérifiées via le ven
 ### Commandes Render
 
 - Root directory : `backend`
-- Build : `uv sync --frozen`
+- Build : `uv sync --frozen --no-dev`
 - Start : `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120`
 
 Le `--timeout 120` n'est pas décoratif : le défaut gunicorn est de 30 s, et les routes `/api/crm-ai/*` appellent des modèles NVIDIA dont la latence dépasse régulièrement ce seuil. Sans ce réglage, le worker est tué en plein appel LLM et le client reçoit une erreur incompréhensible. `gthread` + 4 threads permet d'absorber ces attentes I/O sans multiplier les processus, ce qui compte sur les 512 Mo du free tier.
@@ -209,9 +212,24 @@ Note sur l'ordre : les deux services se référencent mutuellement (`VITE_API_UR
 
 ---
 
+## Stratégie de test
+
+Le projet n'avait aucun framework de test. On introduit **pytest**, en dépendance de développement uniquement, avec un périmètre volontairement étroit.
+
+**Ce qui est testé :**
+
+- `backend/db.py` — le seul module où une régression est à la fois silencieuse et destructrice : un commit manquant ou une transaction laissée ouverte ne lève aucune erreur visible. Le pool y est systématiquement remplacé par un double.
+- La configuration applicative de `create_app()` — garde `CORS_ORIGINS` et endpoint `/healthz` — via le test client Flask.
+
+Aucun de ces tests ne touche la base ni le réseau : la suite tourne sans accès à Supabase et sans le moindre secret, ce qui la rend exécutable en CI le jour où il y en aura une.
+
+**Ce qui n'est pas testé :** les routes métier (`auth`, `tasks`, `companies`…), les services IA et le frontend. Les couvrir demanderait des fixtures applicatives, une base de test et une stratégie de doublure pour les appels NVIDIA — un chantier autonome, sans rapport avec la mise en production. Le prétendre couvert serait pire que l'assumer.
+
+**Conséquence pour Render :** pytest étant dans le groupe `dev`, la commande de build doit être `uv sync --frozen --no-dev`. Sans `--no-dev`, uv installe les dépendances de développement en production.
+
 ## Fichiers touchés
 
-**Déjà fait :** `backend/db.py` (réécrit, vérifié)
+**Déjà fait :** `backend/db.py` (réécrit), `backend/tests/test_db.py` + `backend/tests/conftest.py` (14 tests), `.gitignore` (`.pytest_cache/`)
 
 **À créer :** `backend/wsgi.py`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/.python-version`, `frontend/vercel.json`, `DEPLOY.md`
 
@@ -224,6 +242,8 @@ Note sur l'ordre : les deux services se référencent mutuellement (`VITE_API_UR
 ## Critères d'acceptation
 
 1. ✅ `backend/db.py` rend au pool toute connexion empruntée, sur les trois chemins : succès, exception, `return` anticipé.
+1bis. ✅ `pytest` passe au vert, et chaque test échoue si l'on casse volontairement le comportement qu'il décrit.
+1ter. Les gardes ajoutées aux blocs suivants (CORS, `/healthz`) sont couvertes par un test, pas seulement par une vérification manuelle.
 2. ✅ Aucun fichier de `backend/routes/`, `backend/services/` ni `backend/utils/` n'apparaît dans le diff.
 3. Le backend démarre via la commande gunicorn de production en local, et `/healthz` répond `200`.
 4. Chaque variable d'environnement requise absente produit une erreur au démarrage nommant la variable.
