@@ -173,7 +173,7 @@ git commit -m "build: migrate backend deps to uv with pinned lockfile and gunico
 
 ---
 
-### Task 2: WSGI entrypoint + /healthz endpoint
+### Task 2: WSGI entrypoint + /healthz endpoint — ✅ DONE
 
 Without a module-level `app` object, `gunicorn wsgi:app` fails. We also add the health check that Render will poll.
 
@@ -186,7 +186,7 @@ Without a module-level `app` object, `gunicorn wsgi:app` fails. We also add the 
 - Consumes: the uv environment from task 1.
 - Produces: `backend/wsgi.py` exposing `app` (Flask instance). Route `GET /healthz` → `200 {"status": "ok"}`, and `GET /healthz?db=1` → `200 {"status": "ok", "db": "ok"}` or `503 {"status": "error", "db": "<message>"}`. The `env` and `client` fixtures defined here are reused by task 3.
 
-- [ ] **Step 1: Create `backend/wsgi.py`**
+- [x] **Step 1: Create `backend/wsgi.py`**
 
 ```python
 from app import create_app
@@ -196,7 +196,7 @@ app = create_app()
 
 `app.py` keeps its `if __name__ == '__main__'` block: it remains the development entrypoint.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `backend/tests/test_app.py`:
 
@@ -267,14 +267,14 @@ def test_healthz_deep_check_reports_database_failure(client, monkeypatch):
     assert response.get_json()["status"] == "error"
 ```
 
-- [ ] **Step 3: Run the tests to see them fail**
+- [x] **Step 3: Run the tests to see them fail**
 
 Run: `cd backend && uv run pytest tests/test_app.py -q`
 Expected: 3 failures. `test_healthz_returns_ok` fails on `assert 404 == 200` — the route does not exist yet.
 
 If the tests **pass** at this stage, a `/healthz` route already exists: check before continuing.
 
-- [ ] **Step 4: Add the `request` import in `backend/app.py`**
+- [x] **Step 4: Add the `request` import in `backend/app.py`**
 
 Replace line 1:
 
@@ -288,7 +288,7 @@ with:
 from flask import Flask, request
 ```
 
-- [ ] **Step 5: Add the `/healthz` route in `create_app`**
+- [x] **Step 5: Add the `/healthz` route in `create_app`**
 
 In `backend/app.py`, just before the `# Error handlers` block, insert:
 
@@ -311,12 +311,12 @@ In `backend/app.py`, just before the `# Error handlers` block, insert:
 
 The `db` import is local to the function, for two reasons: the module must not be imported at startup if the DB configuration is missing, and it is what makes the tests' `monkeypatch` effective.
 
-- [ ] **Step 6: Rerun the tests to see them pass**
+- [x] **Step 6: Rerun the tests to see them pass**
 
 Run: `cd backend && uv run pytest -q`
 Expected: `17 passed` (14 from `test_db.py` + 3 new ones).
 
-- [ ] **Step 7: Check the real startup under gunicorn**
+- [x] **Step 7: Check the real startup under gunicorn**
 
 The tests use the Flask test client; this step additionally validates the production command itself.
 
@@ -327,7 +327,7 @@ cd backend && uv run gunicorn wsgi:app --bind 0.0.0.0:5000 \
 ```
 Expected: `[INFO] Booting worker with pid: ...` lines, with no traceback.
 
-- [ ] **Step 8: Check `/healthz?db=1` against the real database**
+- [x] **Step 8: Check `/healthz?db=1` against the real database**
 
 Run (in a second terminal): `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
 Expected:
@@ -338,12 +338,12 @@ Expected:
 
 Then stop gunicorn (Ctrl-C).
 
-- [ ] **Step 9: Check that no business route was touched**
+- [x] **Step 9: Check that no business route was touched**
 
 Run: `git status --short backend/routes backend/services backend/utils`
 Expected: no output.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add backend/wsgi.py backend/app.py backend/tests/test_app.py

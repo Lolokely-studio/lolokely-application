@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
@@ -77,6 +77,21 @@ def create_app():
     app.register_blueprint(company_financials_bp, url_prefix='/api/company-financials')
     app.register_blueprint(crm_ai_bp, url_prefix='/api/crm-ai')
     
+    # Health check (no auth): does not touch the database by default, otherwise
+    # a Supabase outage would make a healthy backend restart in a loop.
+    @app.route('/healthz')
+    def healthz():
+        if request.args.get('db') != '1':
+            return {'status': 'ok'}, 200
+        try:
+            from db import get_connection
+            with get_connection() as conn, conn.cursor() as cur:
+                cur.execute('SELECT 1')
+                cur.fetchone()
+        except Exception as exc:
+            return {'status': 'error', 'db': str(exc)}, 503
+        return {'status': 'ok', 'db': 'ok'}, 200
+
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
