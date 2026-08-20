@@ -26,7 +26,7 @@
 
 ---
 
-### Task 1: uv migration + gunicorn + Python pin
+### Task 1: uv migration + gunicorn + Python pin — ✅ DONE
 
 Replaces `requirements.txt` with a reproducible lockfile and adds the production WSGI server. This is the foundation: the following tasks use `uv run`.
 
@@ -40,12 +40,12 @@ Replaces `requirements.txt` with a reproducible lockfile and adds the production
 - Consumes: nothing.
 - Produces: a `backend/.venv` environment managed by uv, containing `gunicorn`. Tasks 2 and 3 run their checks through `uv run`.
 
-- [ ] **Step 1: Check that uv is installed**
+- [x] **Step 1: Check that uv is installed**
 
 Run: `uv --version`
 Expected: a version number. Otherwise: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-- [ ] **Step 2: Create `backend/.python-version`**
+- [x] **Step 2: Create `backend/.python-version`**
 
 ```
 3.11.9
@@ -53,7 +53,7 @@ Expected: a version number. Otherwise: `curl -LsSf https://astral.sh/uv/install.
 
 This file is read both by Render and by uv, which keeps the two consistent. On Render, the Python version **is not configured through uv**: neither `requires-python` nor `uv python pin` drives the runtime.
 
-- [ ] **Step 3: Create `backend/pyproject.toml`**
+- [x] **Step 3: Create `backend/pyproject.toml`**
 
 Versions taken from the existing local venv (`./venv/bin/pip freeze`), including `Werkzeug` which was absent from `requirements.txt` even though Flask 2.3.3 only declares `>=2.3.7`.
 
@@ -95,22 +95,23 @@ pytest is in the `dev` group: it will not be installed on Render thanks to the `
 
 `package = false` tells uv the project is not an installable library — the code is imported from the working directory, as it is today.
 
-- [ ] **Step 4: Generate the lockfile and install**
+- [x] **Step 4: Generate the lockfile and install**
 
 Run: `cd backend && uv lock && uv sync --frozen`
 Expected: creation of `backend/uv.lock` and `backend/.venv`, with no resolution error.
 
 If `gunicorn==23.0.0` does not resolve, replace it with the latest stable version returned by `uv add gunicorn`, then rerun `uv lock`.
 
-- [ ] **Step 5: Check that every dependency imports**
+- [x] **Step 5: Check that every dependency imports**
 
 Run:
 ```bash
 cd backend && uv run python -c "
+from importlib.metadata import version
 import flask, werkzeug, psycopg2, marshmallow, flask_jwt_extended, flask_bcrypt, flask_cors
 import langchain_core, langchain_nvidia_ai_endpoints, gunicorn
-print('flask', flask.__version__)
-print('werkzeug', werkzeug.__version__)
+print('flask', version('flask'))
+print('werkzeug', version('werkzeug'))
 print('all imports OK')
 "
 ```
@@ -121,23 +122,26 @@ werkzeug 3.1.3
 all imports OK
 ```
 
-- [ ] **Step 6: Check that the Python version is the expected one**
+Use `importlib.metadata.version`, not `werkzeug.__version__`: Werkzeug 3.1 dropped that
+attribute, so reading it raises `AttributeError` even when the import itself succeeded.
+
+- [x] **Step 6: Check that the Python version is the expected one**
 
 Run: `cd backend && uv run python --version`
 Expected: `Python 3.11.9`
 
-- [ ] **Step 7: Check that the existing test suite passes under uv**
+- [x] **Step 7: Check that the existing test suite passes under uv**
 
 Run: `cd backend && uv run pytest -q`
 Expected: `14 passed`
 
 If pytest is not found, the `dev` group has not been synced: rerun `uv sync --frozen`.
 
-- [ ] **Step 8: Check that `--no-dev` does exclude pytest (what Render will do)**
+- [x] **Step 8: Check that `--no-dev` does exclude pytest (what Render will do)**
 
 Run:
 ```bash
-cd backend && uv sync --frozen --no-dev && uv run python -c "
+cd backend && uv sync --frozen --no-dev && uv run --no-dev python -c "
 import importlib.util
 print('pytest absent (correct)' if importlib.util.find_spec('pytest') is None else 'FAILURE: pytest installed in prod')
 "
@@ -145,18 +149,21 @@ uv sync --frozen
 ```
 Expected: `pytest absent (correct)`, then restoration of the full environment.
 
-- [ ] **Step 9: Delete `requirements.txt`**
+The `--no-dev` on `uv run` is required, not decorative: `uv run` re-syncs the environment
+before executing, so without it uv reinstalls pytest and the check reports a false failure.
+
+- [x] **Step 9: Delete `requirements.txt`**
 
 Run: `cd backend && rm requirements.txt`
 
-- [ ] **Step 10: Check that `.venv` is not tracked by git**
+- [x] **Step 10: Check that `.venv` is not tracked by git**
 
 Run: `git status --short backend/ | grep -c '.venv' || echo "0 tracked .venv file"`
 Expected: `0 tracked .venv file`
 
 If `.venv` files show up, add `backend/.venv` to the root `.gitignore` (task 4 will do it anyway, but do not commit `.venv` here).
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add backend/pyproject.toml backend/uv.lock backend/.python-version
