@@ -4,48 +4,71 @@ A Flask-based REST API for task management similar to Monday.com.
 
 ## Setup Instructions
 
-1. **Install Python dependencies:**
+Dependencies are managed with [uv](https://docs.astral.sh/uv/) and locked in `uv.lock`.
+All commands below are run from `backend/`.
+
+1. **Install uv** (once per machine):
    ```bash
-   pip install -r requirements.txt
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. **Set up environment variables:**
-   Create a `.env` file in the backend directory with the following variables:
+2. **Install dependencies:**
    ```bash
-   # Database Configuration
-   USER_DB=your_database_user
-   PASSWORD_DB=your_database_password
-   HOST=your_database_host
-   PORT=5432
-   DBNAME=your_database_name
-
-   # JWT Configuration
-   SECRET_KEY=your-secret-key-here
-   JWT_SECRET_KEY=your-jwt-secret-key-here
-
-   # NVIDIA API Configuration (LangChain ChatNVIDIA)
-   # Get your API key from: https://build.nvidia.com/
-   NVIDIA_API_KEY=nvapi-your_key_here
+   uv sync --frozen
    ```
 
-3. **Configure database (Supabase Postgres):**
-   Set your `.env` with either a full connection string or discrete values:
-   ```env
-   # Full connection string (preferred)
-   DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+   This creates `backend/.venv` with the exact locked versions, on the Python
+   version pinned in `.python-version` (3.11.9). There is no `requirements.txt`
+   and no need to create or activate a virtualenv by hand — `uv run` uses
+   `.venv` automatically.
 
-   # Or discrete values used by backend/db.py
-   USER=...
-   PASSWORD=...
-   HOST=...
-   PORT=5432
-   DBNAME=...
-   ```
+   To add or change a dependency, edit `pyproject.toml`, then run `uv lock`
+   and commit the updated `uv.lock`.
 
-4. **Run the application:**
+3. **Set up environment variables:**
+   Copy `.env.example` to `.env` and fill it in:
    ```bash
-   python app.py
+   cp .env.example .env
    ```
+
+   The variables read by the code:
+
+   | Variable | Required | Notes |
+   |---|---|---|
+   | `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` | yes | Supabase Postgres connection |
+   | `DB_POOL_MIN`, `DB_POOL_MAX` | no | Connection pool bounds, default 1 / 5 |
+   | `SECRET_KEY`, `JWT_SECRET_KEY` | yes | The app refuses to start without them |
+   | `JWT_ACCESS_TOKEN_EXPIRES` | no | Minutes; `false` (default) = never expires |
+   | `CORS_ORIGINS` | yes | Comma-separated frontend origins, e.g. `http://localhost:5173` |
+   | `NVIDIA_API_KEY` | yes for AI routes | From https://build.nvidia.com/ |
+   | `NVIDIA_TEXT_MODELS` | no | Comma-separated model list |
+   | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | no | Not used by the Flask API today |
+
+   The legacy names `USER_DB`, `PASSWORD_DB`, `HOST`, `PORT`, `DBNAME` still
+   work as a fallback, but prefer the `DB_*` names: `PORT` collides with the
+   HTTP port variable reserved by hosting providers. There is **no**
+   `DATABASE_URL` support — `db.py` builds the connection from discrete values.
+
+4. **Initialize the database:**
+   ```bash
+   psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -f schemas/db.sql
+   ```
+   Or run the SQL from `schemas/db.sql` manually in your database.
+
+5. **Run the development server:**
+   ```bash
+   uv run python app.py
+   ```
+
+   Available at `http://localhost:5000`.
+
+6. **Run the tests:**
+   ```bash
+   uv run pytest
+   ```
+
+   The suite touches neither the database nor the network, so it runs without
+   a `.env` and without any secret.
 
 ## API Endpoints
 
