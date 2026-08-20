@@ -1,36 +1,36 @@
-# Déploiement Render (backend) + Vercel (frontend) — Design Spec
+# Render (backend) + Vercel (frontend) Deployment — Design Spec
 
 **Date:** 2026-08-19
 **Status:** Approved
-**Context:** Rendre l'application déployable sur des offres gratuites : backend Flask sur Render (runtime natif Python), frontend Vite/React sur Vercel, code sur GitHub (branche `develop`). L'audit du repo montre un code déjà portable (aucune URL en dur, aucune écriture disque, DB déjà externe sur Supabase) mais quatre blocs bloquants : une fuite de connexions Postgres, l'absence de tout artefact de déploiement backend, l'absence de configuration SPA côté Vercel, et une hygiène de secrets incomplète.
+**Context:** Make the application deployable on free tiers: Flask backend on Render (native Python runtime), Vite/React frontend on Vercel, code on GitHub (`develop` branch). The repo audit shows code that is already portable (no hardcoded URLs, no disk writes, DB already external on Supabase) but four blocking issues: a Postgres connection leak, the absence of any backend deployment artifact, the absence of SPA configuration on the Vercel side, and incomplete secret hygiene.
 
-**Le bloc 1 (fuite de connexions) a été corrigé et vérifié dans le commit de ce spec.** Il reste documenté ci-dessous parce que sa configuration d'environnement — pooler Supabase et renommage `PORT` → `DB_PORT` — conditionne les blocs suivants.
+**Block 1 (connection leak) has been fixed and verified in the commit for this spec.** It remains documented below because its environment configuration — Supabase pooler and the `PORT` → `DB_PORT` rename — conditions the following blocks.
 
 ## Goals
 
-- Le backend démarre sur Render en runtime natif Python, servi par gunicorn, avec des dépendances verrouillées.
-- Le backend tient la charge d'une démo sans saturer le quota de connexions Postgres de Supabase free.
-- Le frontend se déploie sur Vercel avec un routage SPA correct (pas de 404 au refresh).
-- Une configuration manquante échoue **au démarrage avec un message explicite**, jamais silencieusement en production.
-- Un document unique (`DEPLOY.md`) permet de refaire le déploiement de zéro sans relire le code.
+- The backend starts on Render on the native Python runtime, served by gunicorn, with locked dependencies.
+- The backend handles a demo's load without saturating the Postgres connection quota of Supabase free.
+- The frontend deploys on Vercel with correct SPA routing (no 404 on refresh).
+- A missing configuration fails **at startup with an explicit message**, never silently in production.
+- A single document (`DEPLOY.md`) makes it possible to redo the deployment from scratch without rereading the code.
 
 ## Non-goals
 
-- Docker / `render.yaml` (blueprint) — décision prise : runtime natif. Le Dockerfile reste la porte de sortie si une dépendance système apparaît un jour.
-- Montée de version de Flask, Werkzeug ou marshmallow — on **verrouille** l'existant, on ne le modernise pas dans ce chantier.
-- CI/CD, domaine custom, monitoring externe.
-- Tests des routes HTTP, des services IA et du frontend. Seul `db.py` est couvert — voir « Stratégie de test ».
-- Refonte des routes ou de la logique métier. Les 65 sites d'appel DB ne doivent **pas** être modifiés.
-- Migration vers un ORM ou vers le SDK Supabase.
+- Docker / `render.yaml` (blueprint) — decision made: native runtime. The Dockerfile remains the escape hatch if a system dependency ever appears.
+- Version upgrades for Flask, Werkzeug or marshmallow — we **lock** what exists, we do not modernize it in this effort.
+- CI/CD, custom domain, external monitoring.
+- Tests for HTTP routes, AI services and the frontend. Only `db.py` is covered — see "Testing strategy".
+- Rework of the routes or the business logic. The 65 DB call sites must **not** be modified.
+- Migration to an ORM or to the Supabase SDK.
 
-## Décision d'architecture
+## Architecture decision
 
-**Runtime natif Python + uv + gunicorn.**
+**Native Python runtime + uv + gunicorn.**
 
-Le stack n'a aucune dépendance système : `psycopg2-binary` fournit des wheels précompilés, `langchain-*` est du Python pur, et la génération PDF est côté client (`html2pdf.js`). Docker n'apporterait que du temps de build en plus sur un quota free limité. uv est retenu parce que le point faible actuel est précisément la reproductibilité : `langchain-core` et `langchain-nvidia-ai-endpoints` ne sont pas versionnés, et `Werkzeug` (3.1.3 en local) est absent de `requirements.txt`.
+The stack has no system dependency: `psycopg2-binary` ships prebuilt wheels, `langchain-*` is pure Python, and PDF generation is client-side (`html2pdf.js`). Docker would only add build time on a limited free quota. uv is chosen because the current weak point is precisely reproducibility: `langchain-core` and `langchain-nvidia-ai-endpoints` are unpinned, and `Werkzeug` (3.1.3 locally) is absent from `requirements.txt`.
 
 ```
-GitHub (branche develop)
+GitHub (develop branch)
    │
    ├──> Render — root directory: backend/
    │      build : uv sync --frozen --no-dev
@@ -41,211 +41,211 @@ GitHub (branche develop)
    │
    └──> Vercel — root directory: frontend/
           build : npm run build  →  dist/
-          rewrite SPA : /(.*) → /index.html
+          SPA rewrite : /(.*) → /index.html
           env : VITE_API_URL = https://<service>.onrender.com/api
 ```
 
 ---
 
-## Bloc 1 — Fuite de connexions Postgres — ✅ FAIT
+## Block 1 — Postgres connection leak — ✅ DONE
 
-### Problème
+### Problem
 
-`backend/db.py` ouvre une connexion par appel. Le repo compte **65 `with get_connection()` et zéro `conn.close()`**.
+`backend/db.py` opens one connection per call. The repo has **65 `with get_connection()` and zero `conn.close()`**.
 
-En psycopg2, `with conn:` gère la **transaction** (commit en sortie normale, rollback sur exception) — il **ne ferme pas** la connexion. En local, avec le serveur de dev mono-process relancé souvent, ça ne se voit pas. Sur Render avec gunicorn multi-workers et Supabase free (60 connexions directes), la saturation arrive en quelques dizaines de requêtes : `FATAL: too many connections`.
+In psycopg2, `with conn:` manages the **transaction** (commit on normal exit, rollback on exception) — it does **not** close the connection. Locally, with the single-process dev server restarted often, this goes unnoticed. On Render with multi-worker gunicorn and Supabase free (60 direct connections), saturation happens within a few dozen requests: `FATAL: too many connections`.
 
-### Solution retenue et appliquée
+### Chosen and applied solution
 
-Les 65 appels n'utilisent que **deux formes syntaxiques** :
+The 65 calls only use **two syntactic forms**:
 
 ```python
 with get_connection() as conn:
 with get_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
 ```
 
-Les deux consomment uniquement la valeur produite par `__enter__`. On peut donc remplacer l'objet connexion par un **context manager** qui produit cette même connexion et se charge, lui, de la libérer — **sans toucher un seul site d'appel**. C'est ce qui rend ce bloc à faible risque malgré son ampleur.
+Both consume only the value produced by `__enter__`. We can therefore replace the connection object with a **context manager** that yields that same connection and takes care of releasing it — **without touching a single call site**. That is what makes this block low-risk despite its scale.
 
-`db.py` est réécrit autour de :
+`db.py` is rewritten around:
 
-- un `ThreadedConnectionPool` psycopg2, **créé paresseusement, une fois par processus** (compatible avec le fork de gunicorn : aucun pool ne préexiste au fork) ;
-- `get_connection()` décoré `@contextmanager`, qui emprunte au pool, produit la connexion, puis en sortie :
-  - sortie normale → `commit()`,
-  - exception → `rollback()` puis propagation,
-  - dans tous les cas → retour de la connexion au pool (`putconn`), y compris via `finally`.
+- a psycopg2 `ThreadedConnectionPool`, **created lazily, once per process** (compatible with gunicorn's fork: no pool pre-exists the fork);
+- `get_connection()` decorated with `@contextmanager`, which borrows from the pool, yields the connection, then on exit:
+  - normal exit → `commit()`,
+  - exception → `rollback()` then propagate,
+  - in all cases → return the connection to the pool (`putconn`), including via `finally`.
 
-**Sémantique préservée :** un `return` à l'intérieur du `with` (motif très présent, ex. `routes/auth.py:34` qui renvoie un 409 depuis le bloc) est une sortie normale et **committe**, exactement comme avant. Les `conn.commit()` explicites déjà présents dans les routes restent valides — un commit sans transaction en attente est un no-op.
+**Preserved semantics:** a `return` inside the `with` (a very common pattern, e.g. `routes/auth.py:34` which returns a 409 from inside the block) is a normal exit and **commits**, exactly as before. The explicit `conn.commit()` calls already present in the routes remain valid — a commit with no pending transaction is a no-op.
 
-Détail retenu au passage : `DB_POOL_MAX` doit rester **supérieur ou égal au nombre de threads gunicorn par worker**, car psycopg2 lève `PoolError` quand le pool est épuisé au lieu d'attendre une connexion libre. Défaut fixé à 5, pour la commande de démarrage à 4 threads du bloc 2.
+A detail settled along the way: `DB_POOL_MAX` must stay **greater than or equal to the number of gunicorn threads per worker**, because psycopg2 raises `PoolError` when the pool is exhausted instead of waiting for a free connection. Default set to 5, for the 4-thread start command of block 2.
 
-### Correction annexe : collision `PORT`
+### Side fix: `PORT` collision
 
-`db.py` lisait `os.getenv("PORT")` pour le port Postgres. Or `PORT` est la variable **réservée par Render** pour le port HTTP du service — celle que gunicorn utilise dans `--bind 0.0.0.0:$PORT`. Une même variable ne peut pas porter les deux sens.
+`db.py` read `os.getenv("PORT")` for the Postgres port. But `PORT` is the variable **reserved by Render** for the service's HTTP port — the one gunicorn uses in `--bind 0.0.0.0:$PORT`. A single variable cannot carry both meanings.
 
-Les noms canoniques deviennent donc `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, avec repli sur les anciens noms (`USER_DB`, `PASSWORD_DB`, `HOST`, `PORT`, `DBNAME`) pour que le `.env` local continue de fonctionner sans modification. Seul `DB_PORT` refuse ce repli lorsque la variable `RENDER` est présente, et lève une erreur nommant explicitement le conflit.
+The canonical names therefore become `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, with a fallback to the legacy names (`USER_DB`, `PASSWORD_DB`, `HOST`, `PORT`, `DBNAME`) so the local `.env` keeps working unmodified. Only `DB_PORT` refuses that fallback when the `RENDER` variable is present, and raises an error explicitly naming the conflict.
 
-### Vérification effectuée
+### Verification performed
 
-Couvert par `backend/tests/test_db.py` (14 tests, pool simulé, aucun accès réseau) : sortie normale → commit ; `return` anticipé → commit ; exception → rollback puis propagation ; échec du commit → connexion tout de même rendue ; connexion morte → fermée au lieu d'être recyclée ; les deux syntaxes d'appel réelles ; précédence des noms canoniques sur les noms hérités ; garde `DB_PORT`/`RENDER` ; `sslmode` toujours à `require`.
+Covered by `backend/tests/test_db.py` (14 tests, simulated pool, no network access): normal exit → commit; early `return` → commit; exception → rollback then propagation; commit failure → connection returned anyway; dead connection → closed instead of recycled; both real call syntaxes; precedence of canonical names over legacy names; `DB_PORT`/`RENDER` guard; `sslmode` always set to `require`.
 
-La suite a été validée par mutation : suppression du commit final, suppression du `putconn`, recyclage d'une connexion morte et retrait de la garde `RENDER` font chacun échouer au moins un test. Un test qui ne tombe jamais ne protège rien.
+The suite was validated by mutation: removing the final commit, removing the `putconn`, recycling a dead connection and dropping the `RENDER` guard each make at least one test fail. A test that never fails protects nothing.
 
-Validé en complément contre la base Supabase réelle : après deux emprunts successifs, le pool interne ne contient qu'**une seule connexion**, ce qui démontre la réutilisation effective et l'absence de fuite.
+Additionally validated against the real Supabase database: after two successive borrows, the internal pool holds only **a single connection**, which demonstrates effective reuse and the absence of a leak.
 
-### Reste à faire sur ce bloc (configuration, pas code)
+### Remaining work on this block (configuration, not code)
 
-Bascule de la connexion directe vers le **Supavisor transaction pooler** de Supabase, à traiter dans `.env.example` et `DEPLOY.md` (bloc 4) :
+Switch from the direct connection to Supabase's **Supavisor transaction pooler**, to be handled in `.env.example` and `DEPLOY.md` (block 4):
 
-- `DB_PORT` = `6543` au lieu de `5432` ;
-- `DB_USER` prend la forme `postgres.<project-ref>` et non `postgres`.
+- `DB_PORT` = `6543` instead of `5432`;
+- `DB_USER` takes the form `postgres.<project-ref>` and not `postgres`.
 
-Le mode transaction est compatible avec psycopg2 : le driver interpole les paramètres côté client et n'utilise pas de *prepared statements* serveur par défaut, ce qui est la seule incompatibilité connue de ce mode.
+Transaction mode is compatible with psycopg2: the driver interpolates parameters client-side and does not use server-side *prepared statements* by default, which is the only known incompatibility of that mode.
 
 ---
 
-## Bloc 2 — Artefacts de déploiement backend
+## Block 2 — Backend deployment artifacts
 
-### Point d'entrée WSGI
+### WSGI entrypoint
 
-`backend/app.py:80` n'instancie l'application que sous `if __name__ == '__main__'`. Aucun objet `app` n'existe au niveau module, donc `gunicorn app:app` échoue. On ajoute `backend/wsgi.py` :
+`backend/app.py:80` only instantiates the application under `if __name__ == '__main__'`. No `app` object exists at module level, so `gunicorn app:app` fails. We add `backend/wsgi.py`:
 
 ```python
 from app import create_app
 app = create_app()
 ```
 
-`app.py` n'est pas modifié : le bloc `__main__` reste le point d'entrée de développement.
+`app.py` is not modified: the `__main__` block remains the development entrypoint.
 
-### Dépendances et version de Python
+### Dependencies and Python version
 
-`backend/requirements.txt` est remplacé par `backend/pyproject.toml` + `backend/uv.lock`. **`uv.lock` doit être dans `backend/`**, pas à la racine du repo : c'est le root directory du service Render qui fait foi, et c'est la présence de ce fichier qui déclenche la détection uv.
+`backend/requirements.txt` is replaced by `backend/pyproject.toml` + `backend/uv.lock`. **`uv.lock` must live in `backend/`**, not at the repo root: the Render service's root directory is what counts, and it is the presence of that file which triggers uv detection.
 
-Versions à verrouiller — celles qui tournent en local, vérifiées via le venv :
+Versions to lock — the ones running locally, verified through the venv:
 
-| Paquet | Version | Remarque |
+| Package | Version | Note |
 |---|---|---|
-| Flask | 2.3.3 | inchangé |
-| Werkzeug | 3.1.3 | **absent** de `requirements.txt` aujourd'hui ; Flask 2.3.3 déclare `>=2.3.7`, donc non verrouillé la résolution peut casser |
-| Flask-Cors | 4.0.0 | inchangé |
-| Flask-JWT-Extended | 4.5.3 | inchangé |
+| Flask | 2.3.3 | unchanged |
+| Werkzeug | 3.1.3 | **absent** from `requirements.txt` today; Flask 2.3.3 declares `>=2.3.7`, so unpinned the resolution can break |
+| Flask-Cors | 4.0.0 | unchanged |
+| Flask-JWT-Extended | 4.5.3 | unchanged |
 | Flask-Bcrypt | 1.0.1 | + `bcrypt` 5.0.0 |
-| psycopg2-binary | 2.9.7 | **pas de wheel cp313** — d'où le pin Python ci-dessous |
-| marshmallow | 3.20.1 | inchangé |
-| email-validator | 2.0.0 | inchangé |
-| langchain-core | 1.5.3 | **non versionné** aujourd'hui |
-| langchain-nvidia-ai-endpoints | 1.4.3 | **non versionné** aujourd'hui |
-| python-dotenv | 1.0.0 | inchangé |
-| gunicorn | à ajouter | absent du projet |
+| psycopg2-binary | 2.9.7 | **no cp313 wheel** — hence the Python pin below |
+| marshmallow | 3.20.1 | unchanged |
+| email-validator | 2.0.0 | unchanged |
+| langchain-core | 1.5.3 | **unpinned** today |
+| langchain-nvidia-ai-endpoints | 1.4.3 | **unpinned** today |
+| python-dotenv | 1.0.0 | unchanged |
+| gunicorn | to add | absent from the project |
 
-`backend/.python-version` fixe **3.11.9** (la version locale). Render utilise sinon un Python 3.13 par défaut, sur lequel `psycopg2-binary==2.9.7` n'a pas de wheel et le build échoue à la compilation. Ce fichier est lu à la fois par Render et par uv, ce qui garde les deux cohérents. Point de vigilance documenté : sur Render, **la version de Python ne se configure pas via uv** — ni `requires-python`, ni `uv python pin` ne pilotent le runtime.
+`backend/.python-version` pins **3.11.9** (the local version). Otherwise Render uses a default Python 3.13, on which `psycopg2-binary==2.9.7` has no wheel and the build fails at compilation. This file is read both by Render and by uv, which keeps the two consistent. Documented point of caution: on Render, **the Python version is not configured through uv** — neither `requires-python` nor `uv python pin` drives the runtime.
 
-### Commandes Render
+### Render commands
 
-- Root directory : `backend`
-- Build : `uv sync --frozen --no-dev`
-- Start : `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120`
+- Root directory: `backend`
+- Build: `uv sync --frozen --no-dev`
+- Start: `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120`
 
-Le `--timeout 120` n'est pas décoratif : le défaut gunicorn est de 30 s, et les routes `/api/crm-ai/*` appellent des modèles NVIDIA dont la latence dépasse régulièrement ce seuil. Sans ce réglage, le worker est tué en plein appel LLM et le client reçoit une erreur incompréhensible. `gthread` + 4 threads permet d'absorber ces attentes I/O sans multiplier les processus, ce qui compte sur les 512 Mo du free tier.
+The `--timeout 120` is not decorative: the gunicorn default is 30 s, and the `/api/crm-ai/*` routes call NVIDIA models whose latency regularly exceeds that threshold. Without this setting, the worker is killed mid-LLM-call and the client receives an incomprehensible error. `gthread` + 4 threads absorbs those I/O waits without multiplying processes, which matters on the free tier's 512 MB.
 
-### Garde sur `CORS_ORIGINS`
+### `CORS_ORIGINS` guard
 
-`backend/app.py:41` fait `os.getenv('CORS_ORIGINS').split(',')` sans garde : si la variable manque, c'est un `AttributeError` au boot, avec un message qui ne désigne pas la cause. On aligne le comportement sur celui, déjà correct, de `SECRET_KEY` / `JWT_SECRET_KEY` : un `RuntimeError` nommant explicitement la variable manquante.
+`backend/app.py:41` does `os.getenv('CORS_ORIGINS').split(',')` with no guard: if the variable is missing, it is an `AttributeError` at boot, with a message that does not point to the cause. We align the behavior with the already-correct one of `SECRET_KEY` / `JWT_SECRET_KEY`: a `RuntimeError` explicitly naming the missing variable.
 
-Les URLs de preview Vercel changent à chaque déploiement et ne peuvent pas être listées à l'avance. On ajoute donc une variable optionnelle `CORS_ALLOW_VERCEL_PREVIEWS` (défaut : désactivé) qui, si activée, ajoute un motif regex `^https://.*\.vercel\.app$` à la liste des origines — flask-cors accepte les regex dans `origins`. Désactivé par défaut, parce qu'ouvrir toute la plateforme Vercel en production est un choix, pas un défaut raisonnable.
+Vercel preview URLs change on every deployment and cannot be listed in advance. We therefore add an optional `CORS_ALLOW_VERCEL_PREVIEWS` variable (default: disabled) which, when enabled, adds a `^https://.*\.vercel\.app$` regex pattern to the origins list — flask-cors accepts regexes in `origins`. Disabled by default, because opening up the whole Vercel platform in production is a choice, not a reasonable default.
 
-### Endpoint de santé
+### Health endpoint
 
-`GET /healthz`, sans authentification, enregistré directement dans `create_app()` :
+`GET /healthz`, unauthenticated, registered directly in `create_app()`:
 
-- par défaut : réponse `200 {"status": "ok"}` sans toucher la base — un health check ne doit pas dépendre d'un service tiers, sinon Render redémarre en boucle un backend sain lors d'une coupure Supabase ;
-- avec `?db=1` : effectue en plus un `SELECT 1` et renvoie `503` en cas d'échec — utile pour diagnostiquer manuellement.
+- by default: `200 {"status": "ok"}` response without touching the database — a health check must not depend on a third-party service, otherwise Render restarts a healthy backend in a loop during a Supabase outage;
+- with `?db=1`: additionally performs a `SELECT 1` and returns `503` on failure — useful for manual diagnosis.
 
-Renseigné dans le champ *Health Check Path* de Render.
+Set in Render's *Health Check Path* field.
 
-### Spin-down du free tier
+### Free tier spin-down
 
-Le service s'endort après 15 min sans trafic entrant ; le réveil prend ~1 min. Deux implications :
+The service goes to sleep after 15 min without inbound traffic; waking up takes ~1 min. Two implications:
 
-- Côté frontend, le timeout axios par défaut (aucun) laisse l'utilisateur devant une interface figée. On documente le comportement, sans le contourner par du code.
-- Un pinger externe peut maintenir le service éveillé, mais le quota free est de 750 heures d'instance par mois pour l'espace de travail, et un service éveillé 24/7 en consomme ~744. C'est jouable, mais cela ne laisse aucune marge pour un second service gratuit. À documenter comme un arbitrage, pas comme une recommandation.
-
----
-
-## Bloc 3 — Frontend Vercel
-
-### Routage SPA
-
-L'application utilise `react-router-dom`. Sans configuration, un accès direct ou un refresh sur `/dashboard` renvoie un 404 Vercel : le fichier n'existe pas sur le disque statique. On ajoute `frontend/vercel.json` avec une réécriture de toutes les routes vers `/index.html`, laissant le routeur client prendre le relais.
-
-### Garde sur `VITE_API_URL`
-
-`frontend/src/services/api.js:3` lit `import.meta.env.VITE_API_URL` sans repli. Si la variable est oubliée dans Vercel, `baseURL` vaut `undefined`, axios bascule sur des URLs relatives, et les appels partent vers le domaine Vercel où ils renvoient l'`index.html` — un HTML reçu là où du JSON est attendu, avec des symptômes très éloignés de la cause.
-
-On ajoute une vérification au chargement du module qui lève une erreur explicite si la variable est absente. Même principe que côté backend : échouer tôt et nommer la variable.
-
-### Réglages Vercel
-
-- Root directory : `frontend`
-- Framework preset : Vite — Build `npm run build`, Output `dist`
-- Branche de production : `develop` (et non `main`)
-- Variable `VITE_API_URL` = `https://<service>.onrender.com/api`, à définir sur les environnements Production **et** Preview
-
-Rappel de sécurité à inscrire dans `DEPLOY.md` : tout ce qui est préfixé `VITE_` est inliné en clair dans le bundle. `SUPABASE_SERVICE_ROLE_KEY` et `NVIDIA_API_KEY` ne doivent exister que côté Render. C'est correct aujourd'hui ; il s'agit de ne pas le casser.
+- On the frontend side, the default axios timeout (none) leaves the user in front of a frozen interface. We document the behavior without working around it in code.
+- An external pinger can keep the service awake, but the free quota is 750 instance hours per month for the workspace, and a service awake 24/7 consumes ~744. It is doable, but it leaves no headroom for a second free service. To document as a trade-off, not as a recommendation.
 
 ---
 
-## Bloc 4 — Hygiène du repo et des secrets
+## Block 3 — Vercel frontend
+
+### SPA routing
+
+The application uses `react-router-dom`. Without configuration, a direct access or a refresh on `/dashboard` returns a Vercel 404: the file does not exist on the static disk. We add `frontend/vercel.json` with a rewrite of all routes to `/index.html`, letting the client router take over.
+
+### `VITE_API_URL` guard
+
+`frontend/src/services/api.js:3` reads `import.meta.env.VITE_API_URL` with no fallback. If the variable is forgotten in Vercel, `baseURL` is `undefined`, axios falls back to relative URLs, and the calls go to the Vercel domain where they return `index.html` — HTML received where JSON is expected, with symptoms very far from the cause.
+
+We add a module-load check that raises an explicit error if the variable is missing. Same principle as on the backend side: fail early and name the variable.
+
+### Vercel settings
+
+- Root directory: `frontend`
+- Framework preset: Vite — Build `npm run build`, Output `dist`
+- Production branch: `develop` (and not `main`)
+- `VITE_API_URL` variable = `https://<service>.onrender.com/api`, to be set on both the Production **and** Preview environments
+
+Security reminder to write into `DEPLOY.md`: anything prefixed with `VITE_` is inlined in plaintext into the bundle. `SUPABASE_SERVICE_ROLE_KEY` and `NVIDIA_API_KEY` must only exist on the Render side. That is correct today; the point is not to break it.
+
+---
+
+## Block 4 — Repo and secret hygiene
 
 ### `.gitignore`
 
-La règle racine ne couvre que `.env`. Les fichiers `.env.local`, `.env.production` ou `.env.render` ne sont pas ignorés à la racine ni dans `backend/` (le frontend est couvert par son `*.local` local, mais par accident plutôt que par intention). On remplace par une règle explicite : ignorer `.env*`, ré-autoriser `.env.example`.
+The root rule only covers `.env`. The `.env.local`, `.env.production` or `.env.render` files are not ignored at the root nor in `backend/` (the frontend is covered by its local `*.local`, but by accident rather than by intent). We replace it with an explicit rule: ignore `.env*`, re-allow `.env.example`.
 
-### Audit de l'historique
+### History audit
 
-`backend/.env` contient des secrets réels (clés Supabase et NVIDIA) et est aujourd'hui correctement ignoré. Reste à vérifier qu'il n'a jamais été committé dans l'historique : `git log --all --full-history -- backend/.env`. Un `.gitignore` ajouté après coup ne retire rien de l'historique. Si un commit est trouvé, les clés sont à considérer comme compromises et à faire tourner — la réécriture d'historique est un second sujet, à trancher séparément.
+`backend/.env` contains real secrets (Supabase and NVIDIA keys) and is correctly ignored today. It remains to verify that it was never committed in history: `git log --all --full-history -- backend/.env`. A `.gitignore` added after the fact removes nothing from history. If a commit is found, the keys are to be considered compromised and rotated — history rewriting is a separate subject, to be decided separately.
 
 ### `DEPLOY.md`
 
-Document unique à la racine, contenant : les réglages exacts des deux services (root directory, commandes, branche, health check path), le tableau complet des variables d'environnement avec leur destination (Render vs Vercel) et lesquelles sont secrètes, la procédure de récupération des identifiants du pooler Supabase, l'ordre de déploiement (backend d'abord, puis `CORS_ORIGINS` mis à jour avec l'URL Vercel obtenue), et les symptômes des pannes attendues (cold start, `too many connections`, 404 au refresh).
+A single document at the root, containing: the exact settings of both services (root directory, commands, branch, health check path), the complete table of environment variables with their destination (Render vs Vercel) and which ones are secret, the procedure for retrieving the Supabase pooler credentials, the deployment order (backend first, then `CORS_ORIGINS` updated with the obtained Vercel URL), and the symptoms of the expected failures (cold start, `too many connections`, 404 on refresh).
 
-Note sur l'ordre : les deux services se référencent mutuellement (`VITE_API_URL` pointe vers Render, `CORS_ORIGINS` pointe vers Vercel). Il y a donc une dépendance circulaire à casser en déployant le backend d'abord, puis en revenant compléter `CORS_ORIGINS` une fois l'URL Vercel connue.
+Note on ordering: the two services reference each other (`VITE_API_URL` points to Render, `CORS_ORIGINS` points to Vercel). There is therefore a circular dependency to break by deploying the backend first, then coming back to complete `CORS_ORIGINS` once the Vercel URL is known.
 
 ---
 
-## Stratégie de test
+## Testing strategy
 
-Le projet n'avait aucun framework de test. On introduit **pytest**, en dépendance de développement uniquement, avec un périmètre volontairement étroit.
+The project had no test framework. We introduce **pytest**, as a development dependency only, with a deliberately narrow scope.
 
-**Ce qui est testé :**
+**What is tested:**
 
-- `backend/db.py` — le seul module où une régression est à la fois silencieuse et destructrice : un commit manquant ou une transaction laissée ouverte ne lève aucune erreur visible. Le pool y est systématiquement remplacé par un double.
-- La configuration applicative de `create_app()` — garde `CORS_ORIGINS` et endpoint `/healthz` — via le test client Flask.
+- `backend/db.py` — the only module where a regression is both silent and destructive: a missing commit or a transaction left open raises no visible error. The pool is systematically replaced there by a double.
+- The application configuration of `create_app()` — `CORS_ORIGINS` guard and `/healthz` endpoint — via the Flask test client.
 
-Aucun de ces tests ne touche la base ni le réseau : la suite tourne sans accès à Supabase et sans le moindre secret, ce qui la rend exécutable en CI le jour où il y en aura une.
+None of these tests touch the database or the network: the suite runs without access to Supabase and without a single secret, which makes it executable in CI the day there is one.
 
-**Ce qui n'est pas testé :** les routes métier (`auth`, `tasks`, `companies`…), les services IA et le frontend. Les couvrir demanderait des fixtures applicatives, une base de test et une stratégie de doublure pour les appels NVIDIA — un chantier autonome, sans rapport avec la mise en production. Le prétendre couvert serait pire que l'assumer.
+**What is not tested:** the business routes (`auth`, `tasks`, `companies`…), the AI services and the frontend. Covering them would require application fixtures, a test database and a doubling strategy for the NVIDIA calls — a standalone effort, unrelated to going to production. Claiming it covered would be worse than owning it.
 
-**Conséquence pour Render :** pytest étant dans le groupe `dev`, la commande de build doit être `uv sync --frozen --no-dev`. Sans `--no-dev`, uv installe les dépendances de développement en production.
+**Consequence for Render:** since pytest is in the `dev` group, the build command must be `uv sync --frozen --no-dev`. Without `--no-dev`, uv installs the development dependencies in production.
 
-## Fichiers touchés
+## Files touched
 
-**Déjà fait :** `backend/db.py` (réécrit), `backend/tests/test_db.py` + `backend/tests/conftest.py` (14 tests), `.gitignore` (`.pytest_cache/`)
+**Already done:** `backend/db.py` (rewritten), `backend/tests/test_db.py` + `backend/tests/conftest.py` (14 tests), `.gitignore` (`.pytest_cache/`)
 
-**À créer :** `backend/wsgi.py`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/.python-version`, `frontend/vercel.json`, `DEPLOY.md`
+**To create:** `backend/wsgi.py`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/.python-version`, `frontend/vercel.json`, `DEPLOY.md`
 
-**À modifier :** `backend/app.py` (garde CORS + `/healthz`), `backend/.env.example` (noms `DB_*` + pooler), `frontend/src/services/api.js` (garde), `frontend/.env.example`, `.gitignore`
+**To modify:** `backend/app.py` (CORS guard + `/healthz`), `backend/.env.example` (`DB_*` names + pooler), `frontend/src/services/api.js` (guard), `frontend/.env.example`, `.gitignore`
 
-**À supprimer :** `backend/requirements.txt`
+**To delete:** `backend/requirements.txt`
 
-**Explicitement non touchés :** les 12 fichiers de `backend/routes/`, `backend/services/crm_tools.py` et `backend/utils/auth_helpers.py`, soit les 65 sites d'appel DB.
+**Explicitly untouched:** the 12 files in `backend/routes/`, `backend/services/crm_tools.py` and `backend/utils/auth_helpers.py`, i.e. the 65 DB call sites.
 
-## Critères d'acceptation
+## Acceptance criteria
 
-1. ✅ `backend/db.py` rend au pool toute connexion empruntée, sur les trois chemins : succès, exception, `return` anticipé.
-1bis. ✅ `pytest` passe au vert, et chaque test échoue si l'on casse volontairement le comportement qu'il décrit.
-1ter. Les gardes ajoutées aux blocs suivants (CORS, `/healthz`) sont couvertes par un test, pas seulement par une vérification manuelle.
-2. ✅ Aucun fichier de `backend/routes/`, `backend/services/` ni `backend/utils/` n'apparaît dans le diff.
-3. Le backend démarre via la commande gunicorn de production en local, et `/healthz` répond `200`.
-4. Chaque variable d'environnement requise absente produit une erreur au démarrage nommant la variable.
-5. Le build frontend passe, et une route profonde rechargée directement résout via le rewrite.
-6. `DEPLOY.md` liste toutes les variables lues par le code — vérifiable par un `grep` des `os.getenv` et `import.meta.env`.
+1. ✅ `backend/db.py` returns every borrowed connection to the pool, on all three paths: success, exception, early `return`.
+1bis. ✅ `pytest` passes green, and each test fails if the behavior it describes is deliberately broken.
+1ter. The guards added in the following blocks (CORS, `/healthz`) are covered by a test, not only by a manual check.
+2. ✅ No file from `backend/routes/`, `backend/services/` or `backend/utils/` appears in the diff.
+3. The backend starts through the production gunicorn command locally, and `/healthz` answers `200`.
+4. Each missing required environment variable produces a startup error naming the variable.
+5. The frontend build passes, and a deep route reloaded directly resolves through the rewrite.
+6. `DEPLOY.md` lists every environment variable read by the code — verifiable by a `grep` of `os.getenv` and `import.meta.env`.
