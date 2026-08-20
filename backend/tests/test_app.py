@@ -62,3 +62,61 @@ def test_healthz_deep_check_reports_database_failure(client, monkeypatch):
 
     assert response.status_code == 503
     assert response.get_json()["status"] == "error"
+
+
+PREVIEW_ORIGIN = "https://lolokely-git-feat-abc123.vercel.app"
+
+
+def _preflight(client, origin):
+    return client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+
+def test_missing_cors_origins_fails_fast(env):
+    env.setenv("CORS_ORIGINS", "")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_unset_cors_origins_fails_fast(env):
+    """The real production failure mode: the variable is absent, not empty.
+    Without the guard this raises AttributeError on None.split(',')."""
+    env.delenv("CORS_ORIGINS", raising=False)
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_cors_origins_with_only_separators_fails_fast(env):
+    env.setenv("CORS_ORIGINS", " , , ")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_configured_origin_is_allowed(client):
+    response = _preflight(client, "http://localhost:5173")
+
+    assert response.headers.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+
+
+def test_vercel_preview_origin_is_rejected_by_default(client):
+    """Opening up the whole Vercel platform is a choice, not a default."""
+    response = _preflight(client, PREVIEW_ORIGIN)
+
+    assert "Access-Control-Allow-Origin" not in response.headers
+
+
+def test_vercel_preview_origin_is_allowed_when_enabled(env):
+    env.setenv("CORS_ALLOW_VERCEL_PREVIEWS", "true")
+    client = appmod.create_app().test_client()
+
+    response = _preflight(client, PREVIEW_ORIGIN)
+
+    assert response.headers.get("Access-Control-Allow-Origin") == PREVIEW_ORIGIN

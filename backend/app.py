@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 import os
+import re
 
 # Load environment variables
 load_dotenv()
@@ -37,11 +38,19 @@ def create_app():
     bcrypt.init_app(app)
 
     # CORS: allow frontend origins (comma-separated via CORS_ORIGINS)
-    cors_origins = [
-        origin.strip()
-        for origin in os.getenv('CORS_ORIGINS').split(',')
-        if origin.strip()
-    ]
+    cors_raw = os.getenv('CORS_ORIGINS')
+    if not cors_raw:
+        raise RuntimeError('CORS_ORIGINS must be set in the environment')
+    cors_origins = [origin.strip() for origin in cors_raw.split(',') if origin.strip()]
+    if not cors_origins:
+        raise RuntimeError('CORS_ORIGINS must contain at least one origin')
+
+    # Vercel preview URLs change on every deployment and cannot be listed in
+    # advance. Disabled by default: opening up the whole Vercel platform is a
+    # choice, not a reasonable default.
+    if os.getenv('CORS_ALLOW_VERCEL_PREVIEWS', '').strip().lower() in ('1', 'true', 'yes'):
+        cors_origins.append(re.compile(r'^https://.*\.vercel\.app$'))
+
     CORS(
         app,
         resources={r'/api/*': {'origins': cors_origins}},

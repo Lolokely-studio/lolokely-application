@@ -352,7 +352,7 @@ git commit -m "feat: add WSGI entrypoint and tested /healthz endpoint for Render
 
 ---
 
-### Task 3: CORS_ORIGINS guard + Vercel previews
+### Task 3: CORS_ORIGINS guard + Vercel previews — ✅ DONE
 
 `backend/app.py:41` does `os.getenv('CORS_ORIGINS').split(',')` with no guard: missing variable → `AttributeError` at boot, with a message that does not point to the cause.
 
@@ -364,7 +364,7 @@ git commit -m "feat: add WSGI entrypoint and tested /healthz endpoint for Render
 - Consumes: `create_app()` and the `env` / `client` fixtures from task 2.
 - Produces: an optional `CORS_ALLOW_VERCEL_PREVIEWS` environment variable (`1`/`true`/`yes` to enable, disabled by default), consumed by task 6 in `DEPLOY.md`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `backend/tests/test_app.py`:
 
@@ -384,6 +384,15 @@ def _preflight(client, origin):
 
 def test_missing_cors_origins_fails_fast(env):
     env.setenv("CORS_ORIGINS", "")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
+def test_unset_cors_origins_fails_fast(env):
+    """The real production failure mode: the variable is absent, not empty.
+    Without the guard this raises AttributeError on None.split(',')."""
+    env.delenv("CORS_ORIGINS", raising=False)
 
     with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
         appmod.create_app()
@@ -418,12 +427,14 @@ def test_vercel_preview_origin_is_allowed_when_enabled(env):
     assert response.headers.get("Access-Control-Allow-Origin") == PREVIEW_ORIGIN
 ```
 
-- [ ] **Step 2: Run the tests to see them fail**
+- [x] **Step 2: Run the tests to see them fail**
 
 Run: `cd backend && uv run pytest tests/test_app.py -q`
-Expected: `test_missing_cors_origins_fails_fast` fails on `AttributeError: 'NoneType' object has no attribute 'split'` instead of the expected `RuntimeError` — that is exactly the defect to fix. `test_vercel_preview_origin_is_allowed_when_enabled` also fails (variable not implemented).
+Expected: 4 failures. `test_unset_cors_origins_fails_fast` fails on `AttributeError: 'NoneType' object has no attribute 'split'` — that is exactly the defect to fix. `test_missing_cors_origins_fails_fast` and `test_cors_origins_with_only_separators_fails_fast` fail with `DID NOT RAISE RuntimeError` (an empty or separator-only value reaches `split()` without error, it just yields an empty origins list). `test_vercel_preview_origin_is_allowed_when_enabled` also fails (variable not implemented).
 
-- [ ] **Step 3: Add the `re` import in `backend/app.py`**
+Both guards are needed and each is covered: removing the not-set guard leaves `None.split(',')` and only `test_unset_cors_origins_fails_fast` catches it; removing the empty-list guard is caught only by `test_cors_origins_with_only_separators_fails_fast`.
+
+- [x] **Step 3: Add the `re` import in `backend/app.py`**
 
 After `import os`, add:
 
@@ -431,7 +442,7 @@ After `import os`, add:
 import re
 ```
 
-- [ ] **Step 4: Replace the CORS block**
+- [x] **Step 4: Replace the CORS block**
 
 Replace:
 
@@ -462,19 +473,19 @@ with:
         cors_origins.append(re.compile(r'^https://.*\.vercel\.app$'))
 ```
 
-- [ ] **Step 5: Rerun the tests to see them pass**
+- [x] **Step 5: Rerun the tests to see them pass**
 
 Run: `cd backend && uv run pytest -q`
-Expected: `22 passed` (14 + 3 + 5).
+Expected: `23 passed` (14 + 3 + 6).
 
-- [ ] **Step 6: Check that the app starts with the real configuration**
+- [x] **Step 6: Check that the app starts with the real configuration**
 
 Run: `cd backend && uv run python -c "from wsgi import app; print('boot OK')"`
 Expected: `boot OK`
 
 This step uses the local `.env`, where the tests set their own variables — so it verifies that the real configuration does satisfy the new guard.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app.py backend/tests/test_app.py
@@ -820,7 +831,7 @@ Expected: no output.
 - [ ] **The test suite passes**
 
 Run: `cd backend && uv run pytest -q`
-Expected: `22 passed`
+Expected: `23 passed`
 
 - [ ] **The backend starts exactly as on Render**
 
