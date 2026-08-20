@@ -20,6 +20,9 @@ Design rationale: `docs/superpowers/specs/2026-08-19-deployment-render-vercel-de
 - A **Vercel** account with permission to import a project.
 - Access to the **Supabase** project (you will need the database password).
 - The **GitHub** repository, with both platforms authorized to read it.
+- The branch both services deploy from: **`main`** (the repository default).
+  If you deploy a different branch, change it in *both* dashboards — a
+  mismatch means the two halves of the app ship from different commits.
 
 ### The deployment order matters
 
@@ -49,7 +52,7 @@ Confirm the branch you are deploying is pushed and green:
 cd backend && uv sync --frozen && uv run pytest -q   # expect: 23 passed
 cd ../frontend && npm run build                      # expect: ✓ built in ...
 cd .. && git status --short                          # expect: clean
-git push origin develop
+git push origin main
 ```
 
 Confirm these four files are committed — the deploy depends on each:
@@ -114,7 +117,7 @@ on meaning rather than exact wording.
 | Field | Value |
 |---|---|
 | Language / Runtime | **Python 3** — the native runtime, *not* Docker |
-| Branch | `develop` |
+| Branch | `main` |
 | Root Directory | `backend` |
 | Build Command | `uv sync --frozen --no-dev` |
 | Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
@@ -257,6 +260,7 @@ Vercel dashboard → **Add New** → **Project** → import the repository.
 |---|---|
 | Framework Preset | **Vite** |
 | Root Directory | `frontend` |
+| Production Branch | `main` |
 | Build Command | `npm run build` (preset default) |
 | Output Directory | `dist` (preset default) |
 
@@ -486,7 +490,7 @@ as a local fallback, but do not use them on Render.
 
 ### Redeploying
 
-Both platforms auto-deploy on push to their production branch (`develop`).
+Both platforms auto-deploy on push to their production branch (`main`).
 Manual redeploys: Render → **Manual Deploy** → **Deploy latest commit**;
 Vercel → **Deployments** → pick a deployment → **Redeploy**.
 
