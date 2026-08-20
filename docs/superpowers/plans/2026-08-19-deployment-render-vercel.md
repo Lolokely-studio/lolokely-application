@@ -823,11 +823,13 @@ The document must contain, in this order:
    | Root Directory | `backend` |
    | Branch | `develop` |
    | Build Command | `uv sync --frozen --no-dev` |
-   | Start Command | `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
+   | Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
    | Health Check Path | `/healthz` |
    | Instance Type | Free |
 
-   Justify `--no-dev`: pytest is a development dependency; without that flag, uv installs it in production.
+   Justify `--no-dev` on **both** commands: pytest is a development dependency, and
+   `uv run` re-syncs with the dev group by default — so the build flag alone is
+   undone at boot, when the start command reinstalls pytest.
 
    Justify `--timeout 120`: the gunicorn default is 30 s and the `/api/crm-ai/*` routes call NVIDIA models whose latency regularly exceeds it — without this setting the worker is killed mid-LLM-call.
 
@@ -905,8 +907,24 @@ git commit -m "docs: add Render and Vercel deployment guide"
 
 - [ ] **No business file touched**
 
-Run: `git diff --stat develop...HEAD -- backend/routes backend/services backend/utils`
+Run from the **repo root**. From `backend/` the paths silently resolve to
+`backend/backend/routes`, which matches nothing and passes for the wrong reason:
+
+```bash
+git diff --stat develop...HEAD -- backend/routes backend/services backend/utils
+```
 Expected: no output.
+
+If the branch already carried unrelated work before this plan started, that
+baseline is wrong — it reports pre-existing commits as violations. Scope the
+check to this plan's commits instead:
+
+```bash
+git diff --stat <commit-before-task-1>..HEAD -- backend/routes backend/services backend/utils
+```
+Expected: no output. Attribute anything the first command reports with
+`git log --oneline develop...HEAD -- backend/routes backend/services backend/utils`,
+which names the commits responsible.
 
 - [ ] **The test suite passes**
 
@@ -917,10 +935,19 @@ Expected: `23 passed`
 
 Run:
 ```bash
-cd backend && uv sync --frozen --no-dev && \
-  PORT=5000 uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT \
+cd backend && uv sync --frozen --no-dev && export PORT=5000 && \
+  uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT \
   --workers 2 --threads 4 --worker-class gthread --timeout 120
 ```
+
+Two details this command depends on:
+
+- `export` is required. Written as a command prefix (`PORT=5000 uv run ... :$PORT`)
+  the shell expands `$PORT` *before* applying the assignment, so gunicorn receives
+  an empty value and dies with `Error: '' is not a valid port number.` On Render
+  the platform sets `PORT` in the environment, so the prefix form never arises there.
+- `uv run --no-dev`, not plain `uv run`: `uv run` re-syncs with the dev group by
+  default and would reinstall pytest, undoing the `--no-dev` of the line before.
 Then: `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
 Expected: `{"db":"ok","status":"ok"}` and `200`.
 

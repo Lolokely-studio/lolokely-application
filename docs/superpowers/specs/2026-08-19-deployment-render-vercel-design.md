@@ -34,7 +34,7 @@ GitHub (develop branch)
    │
    ├──> Render — root directory: backend/
    │      build : uv sync --frozen --no-dev
-   │      start : uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT ...
+   │      start : uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT ...
    │      health: /healthz
    │        │
    │        └──> Supabase Postgres (Supavisor, transaction pooler :6543)
@@ -143,7 +143,11 @@ Versions to lock — the ones running locally, verified through the venv:
 
 - Root directory: `backend`
 - Build: `uv sync --frozen --no-dev`
-- Start: `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120`
+- Start: `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120`
+
+`--no-dev` is required on the **start** command as well as the build: `uv run`
+re-syncs before executing and that sync includes the dev group by default, so a
+plain `uv run` at boot reinstalls pytest and undoes the build flag.
 
 The `--timeout 120` is not decorative: the gunicorn default is 30 s, and the `/api/crm-ai/*` routes call NVIDIA models whose latency regularly exceeds that threshold. Without this setting, the worker is killed mid-LLM-call and the client receives an incomprehensible error. `gthread` + 4 threads absorbs those I/O waits without multiplying processes, which matters on the free tier's 512 MB.
 

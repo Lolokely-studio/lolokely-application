@@ -72,14 +72,20 @@ Create a **Web Service** pointing at the repository.
 | Root Directory | `backend` |
 | Branch | `develop` |
 | Build Command | `uv sync --frozen --no-dev` |
-| Start Command | `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
+| Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
 | Health Check Path | `/healthz` |
 | Instance Type | Free |
 
 Why each non-obvious flag matters:
 
-- **`--no-dev`** — pytest is declared in the `dev` dependency group. Without
-  this flag, uv installs the test framework into the production image.
+- **`--no-dev`, in *both* commands** — pytest is declared in the `dev`
+  dependency group. `uv run` re-syncs the environment before executing, and by
+  default that sync *includes* the dev group. So `--no-dev` on the build command
+  alone is not enough: the start command would reinstall pytest at every boot,
+  undoing it. Verified locally: after `uv sync --frozen --no-dev`, a plain
+  `uv run` reports `Installed 4 packages` and pytest is importable again.
+  (`uv run --no-sync` also works and touches nothing at boot, but it silently
+  skips the check that the environment matches the lockfile.)
 - **`--timeout 120`** — the gunicorn default is 30 s. The `/api/crm-ai/*`
   routes call NVIDIA models whose latency regularly exceeds that, and the
   worker would be killed mid-generation, returning an error unrelated to the
@@ -226,4 +232,4 @@ as a local fallback, but do not use them on Render.
 | CORS errors from a preview deployment | The preview URL is not in `CORS_ORIGINS`, and preview URLs change every deploy | Set `CORS_ALLOW_VERCEL_PREVIEWS=true` on Render, accepting that it allows every `*.vercel.app` origin |
 | Render build fails compiling `psycopg2` | Python 3.13 used instead of 3.11.9 | Confirm `backend/.python-version` is committed and the Root Directory is `backend` |
 | Worker killed during an AI generation | gunicorn `--timeout` too low | Confirm `--timeout 120` is in the Start Command |
-| `pytest` present in production | Build command missing `--no-dev` | Use `uv sync --frozen --no-dev` |
+| `pytest` present in production | `--no-dev` missing from the **start** command, not just the build | Both commands need it — `uv run` re-syncs with the dev group by default |
