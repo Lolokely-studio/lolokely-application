@@ -63,8 +63,10 @@ lolokely-admin/
 │   ├── routes/           # API route handlers
 │   ├── services/         # Business logic
 │   ├── schemas/          # Data validation schemas
+│   ├── tests/            # pytest suite
 │   ├── app.py           # Flask application entry point
-│   └── requirements.txt # Python dependencies
+│   ├── pyproject.toml   # Python dependencies (uv)
+│   └── uv.lock          # Locked dependency tree
 └── frontend/
     ├── src/
     │   ├── components/   # React components
@@ -85,26 +87,32 @@ lolokely-admin/
    cd backend
    ```
 
-2. **Create virtual environment:**
+2. **Install uv** (once per machine):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 3. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
+   uv sync --frozen
    ```
+
+   uv creates `backend/.venv` from `uv.lock` on the Python version pinned in
+   `.python-version` (3.11.9). No virtualenv to create or activate by hand:
+   prefix commands with `uv run`.
 
 4. **Set up environment variables:**
    Create a `.env` file in the backend directory with the following variables:
    ```bash
    # Database Configuration
-   USER_DB=your_database_user
-   PASSWORD_DB=your_database_password
-   HOST=your_database_host
-   PORT=5432
-   DBNAME=your_database_name
+   DB_USER=your_database_user
+   DB_PASSWORD=your_database_password
+   DB_HOST=your_database_host
+   DB_PORT=5432
+   DB_NAME=your_database_name
+
+   # CORS (comma-separated frontend origins)
+   CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 
    # JWT Configuration
    SECRET_KEY=your-secret-key-here
@@ -133,10 +141,18 @@ lolokely-admin/
 
 6. **Run the backend server:**
    ```bash
-   python app.py
+   uv run python app.py
    ```
 
 The backend will be available at `http://localhost:5000`
+
+7. **Run the backend tests:**
+   ```bash
+   uv run pytest
+   ```
+
+   The suite touches neither the database nor the network, so it needs no
+   `.env` and no secret.
 
 ### Frontend Setup
 

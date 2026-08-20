@@ -1,10 +1,10 @@
-# Déploiement Render + Vercel — Implementation Plan
+# Render + Vercel Deployment — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rendre le backend Flask déployable sur Render (runtime natif Python + uv + gunicorn) et le frontend Vite/React déployable sur Vercel, avec des dépendances verrouillées et une configuration qui échoue au démarrage plutôt qu'en production.
+**Goal:** Make the Flask backend deployable on Render (native Python runtime + uv + gunicorn) and the Vite/React frontend deployable on Vercel, with locked dependencies and a configuration that fails at startup rather than in production.
 
-**Architecture:** Runtime natif Render (pas de Docker — aucune dépendance système dans le stack). `uv.lock` dans `backend/` verrouille l'arbre de dépendances complet ; gunicorn sert `wsgi:app` ; la base reste Supabase Postgres via le pooler Supavisor. Le frontend est un build statique Vite avec réécriture SPA.
+**Architecture:** Render native runtime (no Docker — no system dependency in the stack). `uv.lock` in `backend/` locks the full dependency tree; gunicorn serves `wsgi:app`; the database stays Supabase Postgres through the Supavisor pooler. The frontend is a static Vite build with an SPA rewrite.
 
 **Tech Stack:** Python 3.11.9, uv, Flask 2.3.3, gunicorn, psycopg2-binary, Vite 7, React 19, Vercel, Render.
 
@@ -12,56 +12,56 @@
 
 ## Global Constraints
 
-- **Le bloc 1 du spec (fuite de connexions dans `backend/db.py`) est déjà fait et vérifié.** Ne pas le réimplémenter. `db.py` expose `get_connection()` comme *context manager* et `close_pool()`.
-- **Ne modifier aucun fichier de `backend/routes/`, `backend/services/` ni `backend/utils/`.** Ces 65 sites d'appel DB doivent rester intacts ; leur apparition dans un diff est un échec de tâche.
-- Version Python : **3.11.9** exactement. Render utilise sinon Python 3.13, sur lequel `psycopg2-binary==2.9.7` n'a pas de wheel et le build échoue.
-- **Ne pas monter de version** Flask / Werkzeug / marshmallow. On verrouille l'existant tel qu'il tourne en local.
-- `DB_POOL_MAX` doit rester **≥ au nombre de threads gunicorn par worker** (psycopg2 lève `PoolError` au lieu d'attendre).
-- Les tests vivent dans `backend/tests/` et tournent avec `uv run pytest` (ou `./venv/bin/python -m pytest` avant la tâche 1). `backend/tests/test_db.py` existe déjà : **14 tests, tous verts**. Ne pas le casser.
-- pytest est une dépendance **de développement uniquement**. La commande de build Render doit donc être `uv sync --frozen --no-dev`, sinon uv installe pytest en production.
-- Périmètre de test volontairement étroit : `db.py` et la configuration de `create_app()` (garde CORS, `/healthz`). **Ne pas** écrire de tests pour les routes métier ni pour les services IA — hors périmètre, voir « Stratégie de test » du spec.
-- Un test doit échouer quand on casse le comportement qu'il décrit. Après avoir écrit un test, le lancer une fois contre le code non modifié pour le voir échouer.
-- Toutes les commandes backend s'exécutent depuis `backend/`.
-- Root directory Render = `backend`, root directory Vercel = `frontend`, branche de production = `develop`.
+- **Block 1 of the spec (connection leak in `backend/db.py`) is already done and verified.** Do not reimplement it. `db.py` exposes `get_connection()` as a *context manager* and `close_pool()`.
+- **Do not modify any file in `backend/routes/`, `backend/services/` or `backend/utils/`.** Those 65 DB call sites must stay intact; their appearance in a diff is a task failure.
+- Python version: **3.11.9** exactly. Otherwise Render uses Python 3.13, on which `psycopg2-binary==2.9.7` has no wheel and the build fails.
+- **Do not bump any version** of Flask / Werkzeug / marshmallow. We lock what exists as it runs locally.
+- `DB_POOL_MAX` must stay **≥ the number of gunicorn threads per worker** (psycopg2 raises `PoolError` instead of waiting).
+- Tests live in `backend/tests/` and run with `uv run pytest` (the pre-uv `backend/venv` has been deleted). `backend/tests/test_db.py` already exists: **14 tests, all green**. Do not break it.
+- pytest is a **development-only** dependency. The Render build command must therefore be `uv sync --frozen --no-dev`, otherwise uv installs pytest in production.
+- Deliberately narrow test scope: `db.py` and the configuration of `create_app()` (CORS guard, `/healthz`). **Do not** write tests for the business routes nor for the AI services — out of scope, see "Testing strategy" in the spec.
+- A test must fail when the behavior it describes is broken. After writing a test, run it once against the unmodified code to see it fail.
+- All backend commands run from `backend/`.
+- Render root directory = `backend`, Vercel root directory = `frontend`, production branch = `develop`.
 
 ---
 
-### Task 1: Migration uv + gunicorn + pin Python
+### Task 1: uv migration + gunicorn + Python pin — ✅ DONE
 
-Remplace `requirements.txt` par un lockfile reproductible et ajoute le serveur WSGI de production. C'est la fondation : les tâches suivantes utilisent `uv run`.
+Replaces `requirements.txt` with a reproducible lockfile and adds the production WSGI server. This is the foundation: the following tasks use `uv run`.
 
 **Files:**
 - Create: `backend/pyproject.toml`
-- Create: `backend/uv.lock` (généré, à committer)
+- Create: `backend/uv.lock` (generated, to be committed)
 - Create: `backend/.python-version`
 - Delete: `backend/requirements.txt`
 
 **Interfaces:**
-- Consumes: rien.
-- Produces: environnement `backend/.venv` géré par uv, contenant `gunicorn`. Les tâches 2 et 3 lancent leurs vérifications via `uv run`.
+- Consumes: nothing.
+- Produces: a `backend/.venv` environment managed by uv, containing `gunicorn`. Tasks 2 and 3 run their checks through `uv run`.
 
-- [ ] **Step 1: Vérifier que uv est installé**
+- [x] **Step 1: Check that uv is installed**
 
 Run: `uv --version`
-Expected: un numéro de version. Sinon : `curl -LsSf https://astral.sh/uv/install.sh | sh`
+Expected: a version number. Otherwise: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-- [ ] **Step 2: Créer `backend/.python-version`**
+- [x] **Step 2: Create `backend/.python-version`**
 
 ```
 3.11.9
 ```
 
-Ce fichier est lu à la fois par Render et par uv, ce qui garde les deux cohérents. Sur Render, la version de Python **ne se configure pas via uv** : ni `requires-python`, ni `uv python pin` ne pilotent le runtime.
+This file is read both by Render and by uv, which keeps the two consistent. On Render, the Python version **is not configured through uv**: neither `requires-python` nor `uv python pin` drives the runtime.
 
-- [ ] **Step 3: Créer `backend/pyproject.toml`**
+- [x] **Step 3: Create `backend/pyproject.toml`**
 
-Versions reprises du venv local existant (`./venv/bin/pip freeze`), y compris `Werkzeug` qui était absent de `requirements.txt` alors que Flask 2.3.3 déclare seulement `>=2.3.7`.
+Versions taken from the existing local venv (`./venv/bin/pip freeze`), including `Werkzeug` which was absent from `requirements.txt` even though Flask 2.3.3 only declares `>=2.3.7`.
 
 ```toml
 [project]
 name = "lolokely-backend"
 version = "0.1.0"
-description = "Backend Flask de Lolokely"
+description = "Lolokely Flask backend"
 requires-python = "==3.11.*"
 dependencies = [
     "Flask==2.3.3",
@@ -91,26 +91,27 @@ package = false
 testpaths = ["tests"]
 ```
 
-pytest est dans le groupe `dev` : il ne sera pas installé sur Render grâce au `--no-dev` de la commande de build.
+pytest is in the `dev` group: it will not be installed on Render thanks to the `--no-dev` in the build command.
 
-`package = false` indique à uv que le projet n'est pas une bibliothèque installable — le code est importé depuis le répertoire de travail, comme aujourd'hui.
+`package = false` tells uv the project is not an installable library — the code is imported from the working directory, as it is today.
 
-- [ ] **Step 4: Générer le lockfile et installer**
+- [x] **Step 4: Generate the lockfile and install**
 
 Run: `cd backend && uv lock && uv sync --frozen`
-Expected: création de `backend/uv.lock` et de `backend/.venv`, sans erreur de résolution.
+Expected: creation of `backend/uv.lock` and `backend/.venv`, with no resolution error.
 
-Si `gunicorn==23.0.0` ne résout pas, remplacer par la dernière version stable retournée par `uv add gunicorn`, puis relancer `uv lock`.
+If `gunicorn==23.0.0` does not resolve, replace it with the latest stable version returned by `uv add gunicorn`, then rerun `uv lock`.
 
-- [ ] **Step 5: Vérifier que toutes les dépendances s'importent**
+- [x] **Step 5: Check that every dependency imports**
 
 Run:
 ```bash
 cd backend && uv run python -c "
+from importlib.metadata import version
 import flask, werkzeug, psycopg2, marshmallow, flask_jwt_extended, flask_bcrypt, flask_cors
 import langchain_core, langchain_nvidia_ai_endpoints, gunicorn
-print('flask', flask.__version__)
-print('werkzeug', werkzeug.__version__)
+print('flask', version('flask'))
+print('werkzeug', version('werkzeug'))
 print('all imports OK')
 "
 ```
@@ -121,42 +122,48 @@ werkzeug 3.1.3
 all imports OK
 ```
 
-- [ ] **Step 6: Vérifier que la version de Python est bien celle attendue**
+Use `importlib.metadata.version`, not `werkzeug.__version__`: Werkzeug 3.1 dropped that
+attribute, so reading it raises `AttributeError` even when the import itself succeeded.
+
+- [x] **Step 6: Check that the Python version is the expected one**
 
 Run: `cd backend && uv run python --version`
 Expected: `Python 3.11.9`
 
-- [ ] **Step 7: Vérifier que la suite de tests existante passe sous uv**
+- [x] **Step 7: Check that the existing test suite passes under uv**
 
 Run: `cd backend && uv run pytest -q`
 Expected: `14 passed`
 
-Si pytest n'est pas trouvé, c'est que le groupe `dev` n'a pas été synchronisé : relancer `uv sync --frozen`.
+If pytest is not found, the `dev` group has not been synced: rerun `uv sync --frozen`.
 
-- [ ] **Step 8: Vérifier que `--no-dev` exclut bien pytest (ce que fera Render)**
+- [x] **Step 8: Check that `--no-dev` does exclude pytest (what Render will do)**
 
 Run:
 ```bash
-cd backend && uv sync --frozen --no-dev && uv run python -c "
+cd backend && uv sync --frozen --no-dev && uv run --no-dev python -c "
 import importlib.util
-print('pytest absent (correct)' if importlib.util.find_spec('pytest') is None else 'ECHEC: pytest installe en prod')
+print('pytest absent (correct)' if importlib.util.find_spec('pytest') is None else 'FAILURE: pytest installed in prod')
 "
 uv sync --frozen
 ```
-Expected: `pytest absent (correct)`, puis restauration de l'environnement complet.
+Expected: `pytest absent (correct)`, then restoration of the full environment.
 
-- [ ] **Step 9: Supprimer `requirements.txt`**
+The `--no-dev` on `uv run` is required, not decorative: `uv run` re-syncs the environment
+before executing, so without it uv reinstalls pytest and the check reports a false failure.
+
+- [x] **Step 9: Delete `requirements.txt`**
 
 Run: `cd backend && rm requirements.txt`
 
-- [ ] **Step 10: Vérifier que `.venv` n'est pas suivi par git**
+- [x] **Step 10: Check that `.venv` is not tracked by git**
 
-Run: `git status --short backend/ | grep -c '.venv' || echo "0 fichier .venv suivi"`
-Expected: `0 fichier .venv suivi`
+Run: `git status --short backend/ | grep -c '.venv' || echo "0 tracked .venv file"`
+Expected: `0 tracked .venv file`
 
-Si des fichiers `.venv` apparaissent, ajouter `backend/.venv` au `.gitignore` racine (la tâche 4 le fera de toute façon, mais ne pas committer `.venv` ici).
+If `.venv` files show up, add `backend/.venv` to the root `.gitignore` (task 4 will do it anyway, but do not commit `.venv` here).
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add backend/pyproject.toml backend/uv.lock backend/.python-version
@@ -166,20 +173,20 @@ git commit -m "build: migrate backend deps to uv with pinned lockfile and gunico
 
 ---
 
-### Task 2: Point d'entrée WSGI + endpoint /healthz
+### Task 2: WSGI entrypoint + /healthz endpoint — ✅ DONE
 
-Sans objet `app` au niveau module, `gunicorn wsgi:app` échoue. On ajoute aussi le health check que Render interrogera.
+Without a module-level `app` object, `gunicorn wsgi:app` fails. We also add the health check that Render will poll.
 
 **Files:**
 - Create: `backend/wsgi.py`
 - Create: `backend/tests/test_app.py`
-- Modify: `backend/app.py` (imports + enregistrement de la route dans `create_app`)
+- Modify: `backend/app.py` (imports + route registration in `create_app`)
 
 **Interfaces:**
-- Consumes: environnement uv de la tâche 1.
-- Produces: `backend/wsgi.py` exposant `app` (instance Flask). Route `GET /healthz` → `200 {"status": "ok"}`, et `GET /healthz?db=1` → `200 {"status": "ok", "db": "ok"}` ou `503 {"status": "error", "db": "<message>"}`. Les fixtures `env` et `client` définies ici sont réutilisées par la tâche 3.
+- Consumes: the uv environment from task 1.
+- Produces: `backend/wsgi.py` exposing `app` (Flask instance). Route `GET /healthz` → `200 {"status": "ok"}`, and `GET /healthz?db=1` → `200 {"status": "ok", "db": "ok"}` or `503 {"status": "error", "db": "<message>"}`. The `env` and `client` fixtures defined here are reused by task 3.
 
-- [ ] **Step 1: Créer `backend/wsgi.py`**
+- [x] **Step 1: Create `backend/wsgi.py`**
 
 ```python
 from app import create_app
@@ -187,17 +194,17 @@ from app import create_app
 app = create_app()
 ```
 
-`app.py` conserve son bloc `if __name__ == '__main__'` : il reste le point d'entrée de développement.
+`app.py` keeps its `if __name__ == '__main__'` block: it remains the development entrypoint.
 
-- [ ] **Step 2: Écrire les tests qui échouent**
+- [x] **Step 2: Write the failing tests**
 
-Créer `backend/tests/test_app.py` :
+Create `backend/tests/test_app.py`:
 
 ```python
-"""Configuration applicative : endpoint /healthz et garde CORS.
+"""Application configuration: /healthz endpoint and CORS guard.
 
-Aucun de ces tests ne touche la base ni le reseau. Les variables requises
-sont posees explicitement pour que la suite tourne sans fichier .env.
+None of these tests touch the database or the network. The required variables
+are set explicitly so the suite runs without a .env file.
 """
 
 import contextlib
@@ -240,8 +247,8 @@ def test_healthz_returns_ok(client):
 
 
 def test_healthz_does_not_touch_the_database_by_default(client, monkeypatch):
-    """Un health check qui depend de Supabase ferait redemarrer en boucle un
-    backend sain lors d'une coupure du fournisseur."""
+    """A health check depending on Supabase would make a healthy backend
+    restart in a loop during a provider outage."""
     import db as dbmod
 
     monkeypatch.setattr(dbmod, "get_connection", _unreachable_database)
@@ -260,34 +267,34 @@ def test_healthz_deep_check_reports_database_failure(client, monkeypatch):
     assert response.get_json()["status"] == "error"
 ```
 
-- [ ] **Step 3: Lancer les tests pour les voir échouer**
+- [x] **Step 3: Run the tests to see them fail**
 
 Run: `cd backend && uv run pytest tests/test_app.py -q`
-Expected: 3 échecs. `test_healthz_returns_ok` échoue sur `assert 404 == 200` — la route n'existe pas encore.
+Expected: 3 failures. `test_healthz_returns_ok` fails on `assert 404 == 200` — the route does not exist yet.
 
-Si les tests **passent** à ce stade, c'est qu'une route `/healthz` existe déjà : vérifier avant de continuer.
+If the tests **pass** at this stage, a `/healthz` route already exists: check before continuing.
 
-- [ ] **Step 4: Ajouter l'import `request` dans `backend/app.py`**
+- [x] **Step 4: Add the `request` import in `backend/app.py`**
 
-Remplacer la ligne 1 :
+Replace line 1:
 
 ```python
 from flask import Flask
 ```
 
-par :
+with:
 
 ```python
 from flask import Flask, request
 ```
 
-- [ ] **Step 5: Ajouter la route `/healthz` dans `create_app`**
+- [x] **Step 5: Add the `/healthz` route in `create_app`**
 
-Dans `backend/app.py`, juste avant le bloc `# Error handlers`, insérer :
+In `backend/app.py`, just before the `# Error handlers` block, insert:
 
 ```python
-    # Health check (pas d'auth) : ne touche pas la base par defaut, sinon une
-    # coupure Supabase ferait redemarrer en boucle un backend sain.
+    # Health check (no auth): does not touch the database by default, otherwise
+    # a Supabase outage would make a healthy backend restart in a loop.
     @app.route('/healthz')
     def healthz():
         if request.args.get('db') != '1':
@@ -302,41 +309,41 @@ Dans `backend/app.py`, juste avant le bloc `# Error handlers`, insérer :
         return {'status': 'ok', 'db': 'ok'}, 200
 ```
 
-L'import de `db` est local à la fonction, pour deux raisons : le module ne doit pas être importé au démarrage si la configuration DB est absente, et c'est ce qui rend le `monkeypatch` des tests efficace.
+The `db` import is local to the function, for two reasons: the module must not be imported at startup if the DB configuration is missing, and it is what makes the tests' `monkeypatch` effective.
 
-- [ ] **Step 6: Relancer les tests pour les voir passer**
+- [x] **Step 6: Rerun the tests to see them pass**
 
 Run: `cd backend && uv run pytest -q`
-Expected: `17 passed` (14 de `test_db.py` + 3 nouveaux).
+Expected: `17 passed` (14 from `test_db.py` + 3 new ones).
 
-- [ ] **Step 7: Vérifier le démarrage réel sous gunicorn**
+- [x] **Step 7: Check the real startup under gunicorn**
 
-Les tests utilisent le test client Flask ; cette étape valide en plus la commande de production elle-même.
+The tests use the Flask test client; this step additionally validates the production command itself.
 
-Run (dans un terminal) :
+Run (in one terminal):
 ```bash
 cd backend && uv run gunicorn wsgi:app --bind 0.0.0.0:5000 \
   --workers 2 --threads 4 --worker-class gthread --timeout 120
 ```
-Expected: des lignes `[INFO] Booting worker with pid: ...`, sans traceback.
+Expected: `[INFO] Booting worker with pid: ...` lines, with no traceback.
 
-- [ ] **Step 8: Vérifier `/healthz?db=1` contre la vraie base**
+- [x] **Step 8: Check `/healthz?db=1` against the real database**
 
-Run (dans un second terminal) : `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
+Run (in a second terminal): `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
 Expected:
 ```
 {"db":"ok","status":"ok"}
 200
 ```
 
-Puis arrêter gunicorn (Ctrl-C).
+Then stop gunicorn (Ctrl-C).
 
-- [ ] **Step 9: Vérifier qu'aucune route métier n'a été touchée**
+- [x] **Step 9: Check that no business route was touched**
 
 Run: `git status --short backend/routes backend/services backend/utils`
-Expected: aucune sortie.
+Expected: no output.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add backend/wsgi.py backend/app.py backend/tests/test_app.py
@@ -345,21 +352,21 @@ git commit -m "feat: add WSGI entrypoint and tested /healthz endpoint for Render
 
 ---
 
-### Task 3: Garde sur CORS_ORIGINS + previews Vercel
+### Task 3: CORS_ORIGINS guard + Vercel previews — ✅ DONE
 
-`backend/app.py:41` fait `os.getenv('CORS_ORIGINS').split(',')` sans garde : variable absente → `AttributeError` au boot, avec un message qui ne désigne pas la cause.
+`backend/app.py:41` does `os.getenv('CORS_ORIGINS').split(',')` with no guard: missing variable → `AttributeError` at boot, with a message that does not point to the cause.
 
 **Files:**
-- Modify: `backend/app.py` (import `re` + bloc CORS)
-- Modify: `backend/tests/test_app.py` (ajout des tests CORS)
+- Modify: `backend/app.py` (`re` import + CORS block)
+- Modify: `backend/tests/test_app.py` (add the CORS tests)
 
 **Interfaces:**
-- Consumes: `create_app()` et les fixtures `env` / `client` de la tâche 2.
-- Produces: variable d'environnement optionnelle `CORS_ALLOW_VERCEL_PREVIEWS` (`1`/`true`/`yes` pour activer, désactivée par défaut), consommée par la tâche 6 dans `DEPLOY.md`.
+- Consumes: `create_app()` and the `env` / `client` fixtures from task 2.
+- Produces: an optional `CORS_ALLOW_VERCEL_PREVIEWS` environment variable (`1`/`true`/`yes` to enable, disabled by default), consumed by task 6 in `DEPLOY.md`.
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Write the failing tests**
 
-Ajouter à la fin de `backend/tests/test_app.py` :
+Append to `backend/tests/test_app.py`:
 
 ```python
 PREVIEW_ORIGIN = "https://lolokely-git-feat-abc123.vercel.app"
@@ -382,6 +389,15 @@ def test_missing_cors_origins_fails_fast(env):
         appmod.create_app()
 
 
+def test_unset_cors_origins_fails_fast(env):
+    """The real production failure mode: the variable is absent, not empty.
+    Without the guard this raises AttributeError on None.split(',')."""
+    env.delenv("CORS_ORIGINS", raising=False)
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        appmod.create_app()
+
+
 def test_cors_origins_with_only_separators_fails_fast(env):
     env.setenv("CORS_ORIGINS", " , , ")
 
@@ -396,7 +412,7 @@ def test_configured_origin_is_allowed(client):
 
 
 def test_vercel_preview_origin_is_rejected_by_default(client):
-    """Ouvrir toute la plateforme Vercel est un choix, pas un defaut."""
+    """Opening up the whole Vercel platform is a choice, not a default."""
     response = _preflight(client, PREVIEW_ORIGIN)
 
     assert "Access-Control-Allow-Origin" not in response.headers
@@ -411,22 +427,24 @@ def test_vercel_preview_origin_is_allowed_when_enabled(env):
     assert response.headers.get("Access-Control-Allow-Origin") == PREVIEW_ORIGIN
 ```
 
-- [ ] **Step 2: Lancer les tests pour les voir échouer**
+- [x] **Step 2: Run the tests to see them fail**
 
 Run: `cd backend && uv run pytest tests/test_app.py -q`
-Expected: `test_missing_cors_origins_fails_fast` échoue sur `AttributeError: 'NoneType' object has no attribute 'split'` au lieu du `RuntimeError` attendu — c'est exactement le défaut à corriger. `test_vercel_preview_origin_is_allowed_when_enabled` échoue aussi (variable non implémentée).
+Expected: 4 failures. `test_unset_cors_origins_fails_fast` fails on `AttributeError: 'NoneType' object has no attribute 'split'` — that is exactly the defect to fix. `test_missing_cors_origins_fails_fast` and `test_cors_origins_with_only_separators_fails_fast` fail with `DID NOT RAISE RuntimeError` (an empty or separator-only value reaches `split()` without error, it just yields an empty origins list). `test_vercel_preview_origin_is_allowed_when_enabled` also fails (variable not implemented).
 
-- [ ] **Step 3: Ajouter l'import `re` dans `backend/app.py`**
+Both guards are needed and each is covered: removing the not-set guard leaves `None.split(',')` and only `test_unset_cors_origins_fails_fast` catches it; removing the empty-list guard is caught only by `test_cors_origins_with_only_separators_fails_fast`.
 
-Après `import os`, ajouter :
+- [x] **Step 3: Add the `re` import in `backend/app.py`**
+
+After `import os`, add:
 
 ```python
 import re
 ```
 
-- [ ] **Step 4: Remplacer le bloc CORS**
+- [x] **Step 4: Replace the CORS block**
 
-Remplacer :
+Replace:
 
 ```python
     # CORS: allow frontend origins (comma-separated via CORS_ORIGINS)
@@ -437,7 +455,7 @@ Remplacer :
     ]
 ```
 
-par :
+with:
 
 ```python
     # CORS: allow frontend origins (comma-separated via CORS_ORIGINS)
@@ -448,26 +466,26 @@ par :
     if not cors_origins:
         raise RuntimeError('CORS_ORIGINS must contain at least one origin')
 
-    # Les URLs de preview Vercel changent a chaque deploiement et ne peuvent
-    # pas etre listees a l'avance. Desactive par defaut : ouvrir toute la
-    # plateforme Vercel est un choix, pas un defaut raisonnable.
+    # Vercel preview URLs change on every deployment and cannot be listed in
+    # advance. Disabled by default: opening up the whole Vercel platform is a
+    # choice, not a reasonable default.
     if os.getenv('CORS_ALLOW_VERCEL_PREVIEWS', '').strip().lower() in ('1', 'true', 'yes'):
         cors_origins.append(re.compile(r'^https://.*\.vercel\.app$'))
 ```
 
-- [ ] **Step 5: Relancer les tests pour les voir passer**
+- [x] **Step 5: Rerun the tests to see them pass**
 
 Run: `cd backend && uv run pytest -q`
-Expected: `22 passed` (14 + 3 + 5).
+Expected: `23 passed` (14 + 3 + 6).
 
-- [ ] **Step 6: Vérifier que l'app démarre avec la configuration réelle**
+- [x] **Step 6: Check that the app starts with the real configuration**
 
 Run: `cd backend && uv run python -c "from wsgi import app; print('boot OK')"`
 Expected: `boot OK`
 
-Cette étape utilise le `.env` local, là où les tests posent leurs propres variables — elle vérifie donc que la configuration réelle satisfait bien la nouvelle garde.
+This step uses the local `.env`, where the tests set their own variables — so it verifies that the real configuration does satisfy the new guard.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app.py backend/tests/test_app.py
@@ -476,60 +494,60 @@ git commit -m "fix: fail fast on missing CORS_ORIGINS and support Vercel preview
 
 ---
 
-### Task 4: Variables d'environnement DB_* + hygiène du repo
+### Task 4: DB_* environment variables + repo hygiene — ✅ DONE
 
-Aligne `.env.example` sur les noms canoniques introduits dans `db.py`, bascule vers le pooler Supabase, et ferme le trou du `.gitignore`.
+Aligns `.env.example` with the canonical names introduced in `db.py`, switches to the Supabase pooler, and closes the `.gitignore` gap.
 
 **Files:**
 - Modify: `backend/.env.example`
 - Modify: `.gitignore`
-- Modify: `backend/.env` (local, non suivi — à faire manuellement, hors commit)
+- Modify: `backend/.env` (local, untracked — to be done manually, outside the commit)
 
 **Interfaces:**
-- Consumes: les noms de variables lus par `backend/db.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_POOL_MIN`, `DB_POOL_MAX`) et par `backend/app.py` (`CORS_ORIGINS`, `CORS_ALLOW_VERCEL_PREVIEWS`).
-- Produces: la liste de référence des variables, reprise telle quelle par `DEPLOY.md` en tâche 6.
+- Consumes: the variable names read by `backend/db.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_POOL_MIN`, `DB_POOL_MAX`) and by `backend/app.py` (`CORS_ORIGINS`, `CORS_ALLOW_VERCEL_PREVIEWS`).
+- Produces: the reference list of variables, reused as-is by `DEPLOY.md` in task 6.
 
-- [ ] **Step 1: Corriger le `.gitignore` racine**
+- [x] **Step 1: Fix the root `.gitignore`**
 
-`.pytest_cache/` a déjà été ajouté au `.gitignore` en même temps que la suite de tests. Il reste à traiter les fichiers `.env`.
+`.pytest_cache/` was already added to `.gitignore` along with the test suite. What remains is handling the `.env` files.
 
-Remplacer la ligne `.env` par :
+Replace the `.env` line with:
 
 ```
 .env*
 !.env.example
 ```
 
-Et ajouter, sous `backend/venv` :
+And add, under `backend/venv`:
 
 ```
 backend/.venv
 ```
 
-`.env.local`, `.env.production` et `.env.render` n'étaient couverts nulle part à la racine ni dans `backend/`.
+`.env.local`, `.env.production` and `.env.render` were covered nowhere, neither at the root nor in `backend/`.
 
-- [ ] **Step 2: Vérifier que la règle attrape bien les variantes**
+- [x] **Step 2: Check that the rule does catch the variants**
 
 Run:
 ```bash
 touch .env.local backend/.env.production
-git status --short | grep -E '\.env' || echo "AUCUN fichier .env visible par git"
+git status --short | grep -E '\.env' || echo "NO .env file visible to git"
 rm .env.local backend/.env.production
 ```
-Expected: `AUCUN fichier .env visible par git`
+Expected: `NO .env file visible to git`
 
-- [ ] **Step 3: Vérifier que `.env.example` reste bien suivi**
+- [x] **Step 3: Check that `.env.example` stays tracked**
 
-Run: `git check-ignore -v backend/.env.example || echo "backend/.env.example NON ignore (correct)"`
-Expected: `backend/.env.example NON ignore (correct)`
+Run: `git check-ignore -v backend/.env.example || echo "backend/.env.example NOT ignored (correct)"`
+Expected: `backend/.env.example NOT ignored (correct)`
 
-- [ ] **Step 4: Réécrire `backend/.env.example`**
+- [x] **Step 4: Rewrite `backend/.env.example`**
 
 ```bash
 # CORS (comma-separated frontend origins)
-# Production : y mettre l'URL Vercel, ex. https://lolokely.vercel.app
+# Production: put the Vercel URL here, e.g. https://lolokely.vercel.app
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-# Optionnel : autorise toutes les URLs de preview *.vercel.app (1/true/yes)
+# Optional: allow all *.vercel.app preview URLs (1/true/yes)
 CORS_ALLOW_VERCEL_PREVIEWS=
 
 # Supabase
@@ -538,18 +556,18 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Database — Supabase Supavisor (transaction pooler)
-# ATTENTION : ne PAS utiliser la variable PORT, reservee par Render pour le
-# port HTTP du service. Le port Postgres est DB_PORT.
-# Pooler : DB_PORT=6543 et DB_USER=postgres.<project-ref>
-# Connexion directe : DB_PORT=5432 et DB_USER=postgres
+# WARNING: do NOT use the PORT variable, reserved by Render for the service's
+# HTTP port. The Postgres port is DB_PORT.
+# Pooler: DB_PORT=6543 and DB_USER=postgres.<project-ref>
+# Direct connection: DB_PORT=5432 and DB_USER=postgres
 DB_USER=postgres.your_project_ref
 DB_PASSWORD=your_database_password
 DB_HOST=aws-0-<region>.pooler.supabase.com
 DB_PORT=6543
 DB_NAME=postgres
 
-# Pool de connexions (par processus gunicorn)
-# DB_POOL_MAX doit rester >= au nombre de threads par worker
+# Connection pool (per gunicorn process)
+# DB_POOL_MAX must stay >= the number of threads per worker
 DB_POOL_MIN=1
 DB_POOL_MAX=5
 
@@ -565,31 +583,43 @@ NVIDIA_TEXT_MODELS=nvidia/nemotron-3-ultra-550b-a55b,minimaxai/minimax-m3,z-ai/g
 # Optional: NVIDIA_VISION_MODEL, NVIDIA_TEMPERATURE
 ```
 
-- [ ] **Step 5: Auditer l'historique git à la recherche de secrets committés**
+- [x] **Step 5: Audit git history for committed secrets**
 
 Run: `git log --all --full-history --oneline -- backend/.env frontend/.env.local`
-Expected: aucune sortie.
+Expected: no output.
 
-Si des commits apparaissent : les clés Supabase et NVIDIA sont à considérer comme compromises et à faire tourner. La réécriture d'historique est un sujet distinct, à trancher séparément — le noter dans `DEPLOY.md` en tâche 6, ne pas la lancer ici.
+**Audit result (2026-08-20): clean.** Only `backend/.env.example` and `frontend/.env.example` were ever committed (in `f7190e4`), and a sweep of all history for `nvapi-`, JWT-shaped tokens, `SERVICE_ROLE_KEY=` and password assignments found nothing. No rotation needed; record this in `DEPLOY.md`.
 
-- [ ] **Step 6: Vérifier qu'aucune variable lue par le code ne manque dans `.env.example`**
+If commits show up: the Supabase and NVIDIA keys are to be considered compromised and rotated. History rewriting is a separate subject, to be decided separately — note it in `DEPLOY.md` in task 6, do not start it here.
+
+- [x] **Step 6: Check that no variable read by the code is missing from `.env.example`**
 
 Run:
 ```bash
-grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils \
-  | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/used.txt
+{ grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils
+  grep -rho "_setting(['\"][A-Z_]*['\"]" backend/db.py
+} | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/used.txt
 grep -o '^[A-Z_]*=' backend/.env.example | tr -d '=' | sort -u > /tmp/documented.txt
 comm -23 /tmp/used.txt /tmp/documented.txt
 ```
-Expected: aucune sortie (toute variable lue par le code est documentée).
+Expected: only `NVIDIA_VISION_MODEL`, `PORT` and `RENDER`, explained below.
 
-Les noms hérités (`USER_DB`, `PASSWORD_DB`, `HOST`, `PORT`, `DBNAME`) apparaîtront dans `used.txt` car `db.py` les accepte encore en repli — c'est attendu. S'ils ressortent ici, les ignorer explicitement plutôt que de les réintroduire dans `.env.example`.
+The `_setting(` grep is required, not optional: `db.py` reads `DB_USER`, `DB_PASSWORD`,
+`DB_HOST` and `DB_NAME` through that helper rather than through `os.getenv` directly.
+Checking only `os.getenv` silently misses all four and reports a false clean result.
 
-- [ ] **Step 7: Mettre à jour `backend/.env` local (hors commit)**
+Three names are expected to remain uncovered:
 
-Renommer manuellement dans `backend/.env` : `USER_DB`→`DB_USER`, `PASSWORD_DB`→`DB_PASSWORD`, `HOST`→`DB_HOST`, `PORT`→`DB_PORT`, `DBNAME`→`DB_NAME`. Le repli de `db.py` rend cette étape non bloquante en local, mais elle évite de garder deux conventions.
+- `NVIDIA_VISION_MODEL` — documented as a comment (`# Optional: ...`), not as an assignment.
+- `PORT` — only read as the legacy fallback for `DB_PORT`. Do not reintroduce it into
+  `.env.example`: on Render it is the reserved HTTP port variable.
+- `RENDER` — set by the platform itself, never by the user.
 
-Vérification :
+- [x] **Step 7: Update the local `backend/.env` (outside the commit)**
+
+Manually rename in `backend/.env`: `USER_DB`→`DB_USER`, `PASSWORD_DB`→`DB_PASSWORD`, `HOST`→`DB_HOST`, `PORT`→`DB_PORT`, `DBNAME`→`DB_NAME`. The `db.py` fallback makes this step non-blocking locally, but it avoids keeping two conventions around.
+
+Verification:
 ```bash
 cd backend && uv run python -c "
 from db import get_connection, close_pool
@@ -600,7 +630,7 @@ close_pool()
 ```
 Expected: `DB OK -> 1`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add .gitignore backend/.env.example
@@ -609,18 +639,19 @@ git commit -m "chore: document DB_* env vars, Supabase pooler and tighten .env i
 
 ---
 
-### Task 5: Frontend — réécriture SPA Vercel + garde VITE_API_URL
+### Task 5: Frontend — Vercel SPA rewrite + VITE_API_URL guard — ✅ DONE
 
 **Files:**
 - Create: `frontend/vercel.json`
 - Modify: `frontend/src/services/api.js:3`
+- Modify: `frontend/vite.config.js` (build-time guard — see step 5)
 - Modify: `frontend/.env.example`
 
 **Interfaces:**
-- Consumes: rien du backend (le contrat est l'URL `VITE_API_URL`).
-- Produces: build statique `frontend/dist` servi par Vercel avec fallback SPA.
+- Consumes: nothing from the backend (the contract is the `VITE_API_URL` URL).
+- Produces: a `frontend/dist` static build served by Vercel with an SPA fallback.
 
-- [ ] **Step 1: Créer `frontend/vercel.json`**
+- [x] **Step 1: Create `frontend/vercel.json`**
 
 ```json
 {
@@ -630,17 +661,17 @@ git commit -m "chore: document DB_* env vars, Supabase pooler and tighten .env i
 }
 ```
 
-Les fichiers statiques existants (`/assets/*`) sont servis avant les réécritures : seules les routes sans fichier correspondant retombent sur `index.html`, ce qui est exactement le comportement voulu pour `react-router-dom`.
+Existing static files (`/assets/*`) are served before the rewrites: only routes with no matching file fall back to `index.html`, which is exactly the behavior wanted for `react-router-dom`.
 
-- [ ] **Step 2: Ajouter la garde dans `frontend/src/services/api.js`**
+- [x] **Step 2: Add the guard in `frontend/src/services/api.js`**
 
-Remplacer la ligne 3 :
+Replace line 3:
 
 ```javascript
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 ```
 
-par :
+with:
 
 ```javascript
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -653,106 +684,158 @@ if (!API_BASE_URL) {
 }
 ```
 
-Sans cette garde, `baseURL` vaut `undefined`, axios bascule sur des URLs relatives, et les appels partent vers le domaine Vercel où ils reçoivent l'`index.html` — du HTML là où du JSON est attendu, avec des symptômes très éloignés de la cause.
+Without this guard, `baseURL` is `undefined`, axios falls back to relative URLs, and the calls go to the Vercel domain where they receive `index.html` — HTML where JSON is expected, with symptoms very far from the cause.
 
-- [ ] **Step 3: Compléter `frontend/.env.example`**
+- [x] **Step 3: Complete `frontend/.env.example`**
 
 ```
-# URL de base de l'API, suffixe /api inclus
-# Local : http://localhost:5000/api
-# Production : https://<votre-service>.onrender.com/api
+# API base URL, including the /api suffix
+# Local: http://localhost:5000/api
+# Production: https://<your-service>.onrender.com/api
 VITE_API_URL=http://localhost:5000/api
 ```
 
-- [ ] **Step 4: Vérifier que le build passe avec la variable définie**
+- [x] **Step 4: Check that the build passes with the variable defined**
 
 Run: `cd frontend && npm run build`
-Expected: `✓ built in ...`, et création de `frontend/dist/index.html`.
+Expected: `✓ built in ...`, and creation of `frontend/dist/index.html`.
 
-- [ ] **Step 5: Vérifier que le build échoue explicitement sans la variable**
+- [x] **Step 5: Add a build-time guard, and check the build fails without the variable**
 
-Run:
-```bash
-cd frontend && mv .env.local .env.local.bak && VITE_API_URL= npm run build; \
-  mv .env.local.bak .env.local
+The guard added in step 2 runs at *module load*. Vite only bundles that module, it
+never evaluates it, so a missing `VITE_API_URL` cannot fail the build: it inlines an
+empty string, the minifier folds the check into an unconditional `throw`, and the
+broken bundle ships. The failure then lands in a visitor's browser console rather
+than in the Vercel build log. A runtime guard alone does not satisfy the spec goal
+of failing at build/startup, so add a second guard that runs during the build.
+
+Replace `frontend/vite.config.js` with:
+
+```javascript
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig(({ mode }) => {
+  // Fail the build, not the browser. The guard in src/services/api.js runs at
+  // module load: Vite only bundles that module, it never evaluates it, so a
+  // missing VITE_API_URL would ship a bundle that throws on first page load
+  // instead of showing up in the Vercel build log. This check runs during the
+  // build itself. loadEnv also reads process.env, which is how Vercel and
+  // Render pass the variable.
+  const env = loadEnv(mode, process.cwd(), '')
+  if (!env.VITE_API_URL) {
+    throw new Error(
+      'VITE_API_URL is not defined. Set it in frontend/.env.local for local dev, ' +
+        'or in the Vercel project settings (Production and Preview) for deploys.',
+    )
+  }
+
+  return {
+    plugins: [react()],
+  }
+})
 ```
-Expected: le build échoue avec le message `VITE_API_URL is not defined...`.
 
-Si le build **réussit**, c'est que Vite a inliné une valeur depuis un autre fichier `.env` — vérifier lequel avant de continuer.
+Keep the `api.js` guard as well: it still covers a variable set to an empty string
+at runtime, and it names the same variable.
 
-- [ ] **Step 6: Vérifier le rendu d'une route profonde en local**
+Then verify all three cases:
+
+```bash
+cd frontend
+mv .env.local .env.local.bak
+npm run build >/dev/null 2>&1; echo "missing var  -> exit $?"
+VITE_API_URL=https://example.onrender.com/api npm run build >/dev/null 2>&1; echo "via process.env -> exit $?"
+mv .env.local.bak .env.local
+npm run build >/dev/null 2>&1; echo "local dev    -> exit $?"
+```
+Expected:
+```
+missing var  -> exit 1
+via process.env -> exit 0
+local dev    -> exit 0
+```
+
+The middle case matters: Vercel passes the variable through `process.env`, not
+through a `.env` file. A guard that only reads `.env` files would fail every
+Vercel build.
+
+- [x] **Step 6: Check that a deep route renders locally**
 
 Run:
 ```bash
 cd frontend && npm run preview
 ```
-Puis ouvrir `http://localhost:4173/login` directement (pas via un lien) et recharger.
-Expected: la page se charge, pas de 404.
+Then open `http://localhost:4173/login` directly (not through a link) and reload.
+Expected: the page loads, no 404.
 
-`vite preview` applique déjà un fallback SPA ; ce test valide le routeur, tandis que `vercel.json` apporte le même comportement côté Vercel. Arrêter le serveur ensuite.
+`vite preview` already applies an SPA fallback; this test validates the router, while `vercel.json` brings the same behavior on the Vercel side. Stop the server afterwards.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
-git add frontend/vercel.json frontend/src/services/api.js frontend/.env.example
+git add frontend/vercel.json frontend/src/services/api.js frontend/vite.config.js frontend/.env.example
 git commit -m "feat: add Vercel SPA rewrite and fail fast on missing VITE_API_URL"
 ```
 
 ---
 
-### Task 6: DEPLOY.md
+### Task 6: DEPLOY.md — ✅ DONE
 
-Document unique permettant de refaire le déploiement de zéro sans relire le code.
+A single document making it possible to redo the deployment from scratch without rereading the code.
 
 **Files:**
 - Create: `DEPLOY.md`
 
 **Interfaces:**
-- Consumes: les réglages et variables établis dans les tâches 1 à 5.
-- Produces: rien (document terminal).
+- Consumes: the settings and variables established in tasks 1 to 5.
+- Produces: nothing (terminal document).
 
-- [ ] **Step 1: Rassembler la liste réelle des variables lues par le code**
+- [x] **Step 1: Collect the real list of variables read by the code**
 
 Run:
 ```bash
 grep -rn "os.getenv" backend/app.py backend/db.py backend/services backend/routes backend/utils | sed 's/:.*getenv(/ -> /'
 grep -rn "import.meta.env" frontend/src
 ```
-Expected: la liste complète à reporter dans le tableau du document. Toute variable trouvée ici doit apparaître dans `DEPLOY.md`.
+Expected: the complete list to carry into the document's table. Every variable found here must appear in `DEPLOY.md`.
 
-- [ ] **Step 2: Écrire `DEPLOY.md`**
+- [x] **Step 2: Write `DEPLOY.md`**
 
-Le document doit contenir, dans cet ordre :
+The document must contain, in this order:
 
-1. **Prérequis** — un compte Render, un compte Vercel, le projet Supabase existant, le repo GitHub avec la branche `develop`.
+1. **Prerequisites** — a Render account, a Vercel account, the existing Supabase project, the GitHub repo with the `develop` branch.
 
-2. **Ordre de déploiement et dépendance circulaire.** Les deux services se référencent mutuellement : `VITE_API_URL` pointe vers Render, `CORS_ORIGINS` pointe vers Vercel. Casser le cycle ainsi :
-   1. déployer le backend sur Render avec un `CORS_ORIGINS` provisoire (`http://localhost:5173`) ;
-   2. relever l'URL `https://<service>.onrender.com` ;
-   3. déployer le frontend sur Vercel avec `VITE_API_URL=https://<service>.onrender.com/api` ;
-   4. relever l'URL Vercel, revenir sur Render, mettre `CORS_ORIGINS` à cette URL, redéployer.
+2. **Deployment order and circular dependency.** The two services reference each other: `VITE_API_URL` points to Render, `CORS_ORIGINS` points to Vercel. Break the cycle as follows:
+   1. deploy the backend on Render with a provisional `CORS_ORIGINS` (`http://localhost:5173`);
+   2. note the `https://<service>.onrender.com` URL;
+   3. deploy the frontend on Vercel with `VITE_API_URL=https://<service>.onrender.com/api`;
+   4. note the Vercel URL, go back to Render, set `CORS_ORIGINS` to that URL, redeploy.
 
-3. **Récupération des identifiants du pooler Supabase** — dashboard Supabase → Project Settings → Database → Connection string → onglet **Transaction pooler**. En extraire l'hôte (`aws-0-<region>.pooler.supabase.com`), le port `6543` et l'utilisateur `postgres.<project-ref>`. Signaler que l'utilisateur du pooler n'est **pas** `postgres`.
+3. **Retrieving the Supabase pooler credentials** — Supabase dashboard → Project Settings → Database → Connection string → **Transaction pooler** tab. Extract the host (`aws-0-<region>.pooler.supabase.com`), the port `6543` and the user `postgres.<project-ref>`. Point out that the pooler user is **not** `postgres`.
 
-4. **Réglages Render** :
+4. **Render settings**:
 
-   | Réglage | Valeur |
+   | Setting | Value |
    |---|---|
-   | Language / Runtime | Python 3 (natif, pas Docker) |
+   | Language / Runtime | Python 3 (native, not Docker) |
    | Root Directory | `backend` |
    | Branch | `develop` |
    | Build Command | `uv sync --frozen --no-dev` |
-   | Start Command | `uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
+   | Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
    | Health Check Path | `/healthz` |
    | Instance Type | Free |
 
-   Justifier `--no-dev` : pytest est une dépendance de développement ; sans ce drapeau, uv l'installe en production.
+   Justify `--no-dev` on **both** commands: pytest is a development dependency, and
+   `uv run` re-syncs with the dev group by default — so the build flag alone is
+   undone at boot, when the start command reinstalls pytest.
 
-   Justifier `--timeout 120` : le défaut gunicorn est de 30 s et les routes `/api/crm-ai/*` appellent des modèles NVIDIA dont la latence le dépasse régulièrement — sans ce réglage le worker est tué en plein appel LLM.
+   Justify `--timeout 120`: the gunicorn default is 30 s and the `/api/crm-ai/*` routes call NVIDIA models whose latency regularly exceeds it — without this setting the worker is killed mid-LLM-call.
 
-5. **Réglages Vercel** :
+5. **Vercel settings**:
 
-   | Réglage | Valeur |
+   | Setting | Value |
    |---|---|
    | Framework Preset | Vite |
    | Root Directory | `frontend` |
@@ -760,41 +843,58 @@ Le document doit contenir, dans cet ordre :
    | Build Command | `npm run build` |
    | Output Directory | `dist` |
 
-6. **Tableau des variables d'environnement** — une ligne par variable, avec les colonnes : nom, destination (Render / Vercel), secrète (oui/non), exemple de valeur. Doit couvrir : `CORS_ORIGINS`, `CORS_ALLOW_VERCEL_PREVIEWS`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_POOL_MIN`, `DB_POOL_MAX`, `SECRET_KEY`, `JWT_SECRET_KEY`, `JWT_ACCESS_TOKEN_EXPIRES`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NVIDIA_API_KEY`, `NVIDIA_TEXT_MODELS` (Render) et `VITE_API_URL` (Vercel).
+6. **Environment variables table** — one row per variable, with the columns: name, destination (Render / Vercel), secret (yes/no), example value. Must cover: `CORS_ORIGINS`, `CORS_ALLOW_VERCEL_PREVIEWS`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_POOL_MIN`, `DB_POOL_MAX`, `SECRET_KEY`, `JWT_SECRET_KEY`, `JWT_ACCESS_TOKEN_EXPIRES`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NVIDIA_API_KEY`, `NVIDIA_TEXT_MODELS` (Render) and `VITE_API_URL` (Vercel).
 
-7. **Avertissement de sécurité** — tout ce qui est préfixé `VITE_` est inliné **en clair** dans le bundle JavaScript livré au navigateur. `SUPABASE_SERVICE_ROLE_KEY` et `NVIDIA_API_KEY` ne doivent exister que côté Render. Mentionner aussi le résultat de l'audit d'historique de la tâche 4, et la rotation des clés si un `.env` y a été trouvé.
+7. **Security warning** — anything prefixed with `VITE_` is inlined **in plaintext** into the JavaScript bundle delivered to the browser. `SUPABASE_SERVICE_ROLE_KEY` and `NVIDIA_API_KEY` must only exist on the Render side. Also mention the result of the history audit from task 4, and key rotation if a `.env` was found there.
 
-8. **Piège `PORT`** — `PORT` est réservé par Render pour le port HTTP du service. Le port Postgres est `DB_PORT`. Ne jamais définir `PORT` pour la base sur Render : `db.py` lève une erreur explicite dans ce cas.
+8. **The `PORT` trap** — `PORT` is reserved by Render for the service's HTTP port. The Postgres port is `DB_PORT`. Never set `PORT` for the database on Render: `db.py` raises an explicit error in that case.
 
-9. **Pannes attendues et symptômes** :
+9. **Expected failures and symptoms**:
 
-   | Symptôme | Cause | Correctif |
+   | Symptom | Cause | Fix |
    |---|---|---|
-   | Première requête très lente (~1 min) puis normal | Spin-down free après 15 min sans trafic | Comportement attendu ; un pinger externe l'évite mais consomme ~744 h des 750 h/mois du quota |
-   | `FATAL: too many connections` | `DB_POOL_MAX` trop haut × nombre de workers | Baisser `DB_POOL_MAX`, vérifier l'usage du pooler `:6543` |
-   | `PoolError: connection pool exhausted` | `DB_POOL_MAX` < threads gunicorn | Monter `DB_POOL_MAX` à ≥ `--threads` |
-   | 404 au refresh sur une route profonde | `frontend/vercel.json` absent ou ignoré | Vérifier le Root Directory Vercel = `frontend` |
-   | Réponses HTML là où du JSON est attendu | `VITE_API_URL` non défini au build | Définir la variable sur Production **et** Preview, puis rebuild |
-   | Erreurs CORS depuis une URL de preview | Preview non listée dans `CORS_ORIGINS` | Activer `CORS_ALLOW_VERCEL_PREVIEWS=true` sur Render |
-   | Build Render échoue sur `psycopg2` | Python 3.13 utilisé au lieu de 3.11.9 | Vérifier que `backend/.python-version` est bien committé |
-   | Worker tué pendant une génération IA | `--timeout` gunicorn trop bas | Confirmer `--timeout 120` dans la Start Command |
+   | Very slow first request (~1 min) then normal | Free tier spin-down after 15 min without traffic | Expected behavior; an external pinger avoids it but consumes ~744 h of the 750 h/month quota |
+   | `FATAL: too many connections` | `DB_POOL_MAX` too high × number of workers | Lower `DB_POOL_MAX`, verify the `:6543` pooler is being used |
+   | `PoolError: connection pool exhausted` | `DB_POOL_MAX` < gunicorn threads | Raise `DB_POOL_MAX` to ≥ `--threads` |
+   | 404 on refresh on a deep route | `frontend/vercel.json` missing or ignored | Check that the Vercel Root Directory = `frontend` |
+   | HTML responses where JSON is expected | `VITE_API_URL` not defined at build time | Set the variable on Production **and** Preview, then rebuild |
+   | CORS errors from a preview URL | Preview not listed in `CORS_ORIGINS` | Enable `CORS_ALLOW_VERCEL_PREVIEWS=true` on Render |
+   | Render build fails on `psycopg2` | Python 3.13 used instead of 3.11.9 | Check that `backend/.python-version` is committed |
+   | Worker killed during an AI generation | gunicorn `--timeout` too low | Confirm `--timeout 120` in the Start Command |
 
-- [ ] **Step 3: Vérifier la complétude du tableau des variables**
+- [x] **Step 3: Check the completeness of the variables table**
 
 Run:
 ```bash
 grep -o '^[A-Z_]*=' backend/.env.example | tr -d '=' | sort -u > /tmp/env_ref.txt
-while read v; do grep -q "\`$v\`" DEPLOY.md || echo "MANQUANT dans DEPLOY.md: $v"; done < /tmp/env_ref.txt
-echo "--- verification terminee ---"
+while read v; do grep -q "\`$v\`" DEPLOY.md || echo "MISSING from DEPLOY.md: $v"; done < /tmp/env_ref.txt
+echo "--- check complete ---"
 ```
-Expected: aucune ligne `MANQUANT`, puis `--- verification terminee ---`.
+Expected: no `MISSING` line, then `--- check complete ---`.
 
-- [ ] **Step 4: Vérifier que `VITE_API_URL` est documentée**
+That check only proves `.env.example` is covered. Acceptance criterion 6 is about
+what the *code* reads, which is a larger set — `.env.example` documents neither the
+NVIDIA tuning variables nor `VITE_API_URL`. Run this too:
+
+```bash
+{ grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils
+  grep -rho "_setting(['\"][A-Z_]*['\"]" backend/db.py
+  grep -rho "_env_float(['\"][A-Z_]*['\"]" backend/services/*.py
+  grep -rho "_env_int(['\"][A-Z_]*['\"]" backend/services/*.py
+  grep -rho "import.meta.env.[A-Z_]*" frontend/src | sed 's/.*env\./"/;s/$/"/'
+} | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/code_vars.txt
+while read v; do grep -q "\`$v\`" DEPLOY.md || echo "MISSING: $v"; done < /tmp/code_vars.txt
+echo "--- code-side check complete ---"
+```
+Expected: no `MISSING` line. `PORT` and `RENDER` count as documented because
+`DEPLOY.md` explains both in its `PORT` trap section.
+
+- [x] **Step 4: Check that `VITE_API_URL` is documented**
 
 Run: `grep -c 'VITE_API_URL' DEPLOY.md`
-Expected: un nombre ≥ 2.
+Expected: a number ≥ 2.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add DEPLOY.md
@@ -803,39 +903,64 @@ git commit -m "docs: add Render and Vercel deployment guide"
 
 ---
 
-## Vérification finale (après la tâche 6)
+## Final verification (after task 6)
 
-- [ ] **Aucun fichier métier touché**
+- [ ] **No business file touched**
 
-Run: `git diff --stat develop...HEAD -- backend/routes backend/services backend/utils`
-Expected: aucune sortie.
+Run from the **repo root**. From `backend/` the paths silently resolve to
+`backend/backend/routes`, which matches nothing and passes for the wrong reason:
 
-- [ ] **La suite de tests passe**
+```bash
+git diff --stat develop...HEAD -- backend/routes backend/services backend/utils
+```
+Expected: no output.
+
+If the branch already carried unrelated work before this plan started, that
+baseline is wrong — it reports pre-existing commits as violations. Scope the
+check to this plan's commits instead:
+
+```bash
+git diff --stat <commit-before-task-1>..HEAD -- backend/routes backend/services backend/utils
+```
+Expected: no output. Attribute anything the first command reports with
+`git log --oneline develop...HEAD -- backend/routes backend/services backend/utils`,
+which names the commits responsible.
+
+- [ ] **The test suite passes**
 
 Run: `cd backend && uv run pytest -q`
-Expected: `22 passed`
+Expected: `23 passed`
 
-- [ ] **Le backend démarre exactement comme sur Render**
+- [ ] **The backend starts exactly as on Render**
 
 Run:
 ```bash
-cd backend && uv sync --frozen --no-dev && \
-  PORT=5000 uv run gunicorn wsgi:app --bind 0.0.0.0:$PORT \
+cd backend && uv sync --frozen --no-dev && export PORT=5000 && \
+  uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT \
   --workers 2 --threads 4 --worker-class gthread --timeout 120
 ```
-Puis : `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
-Expected: `{"db":"ok","status":"ok"}` et `200`.
 
-Après ce contrôle, restaurer l'environnement de développement avec `uv sync --frozen` (le `--no-dev` a retiré pytest).
+Two details this command depends on:
 
-Ce test couvre aussi la garde `PORT`/`DB_PORT` : avec `PORT=5000` défini, la connexion Postgres doit continuer d'utiliser `DB_PORT` et non 5000.
+- `export` is required. Written as a command prefix (`PORT=5000 uv run ... :$PORT`)
+  the shell expands `$PORT` *before* applying the assignment, so gunicorn receives
+  an empty value and dies with `Error: '' is not a valid port number.` On Render
+  the platform sets `PORT` in the environment, so the prefix form never arises there.
+- `uv run --no-dev`, not plain `uv run`: `uv run` re-syncs with the dev group by
+  default and would reinstall pytest, undoing the `--no-dev` of the line before.
+Then: `curl -s -w '\n%{http_code}\n' 'http://localhost:5000/healthz?db=1'`
+Expected: `{"db":"ok","status":"ok"}` and `200`.
 
-- [ ] **Le frontend build**
+After this check, restore the development environment with `uv sync --frozen` (the `--no-dev` removed pytest).
+
+This test also covers the `PORT`/`DB_PORT` guard: with `PORT=5000` set, the Postgres connection must keep using `DB_PORT` and not 5000.
+
+- [ ] **The frontend builds**
 
 Run: `cd frontend && npm run build`
 Expected: `✓ built in ...`
 
-- [ ] **Aucun secret dans le diff**
+- [ ] **No secret in the diff**
 
 Run: `git diff develop...HEAD | grep -iE 'nvapi-|eyJ|service_role|password' | grep -v '.env.example'`
-Expected: aucune sortie.
+Expected: no output.

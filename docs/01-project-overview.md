@@ -43,7 +43,7 @@ Lolokely is a comprehensive full-stack web application designed to streamline te
 ### 2. Social Media Post Generator
 
 #### AI-Powered Generation
-- **Google Gemini Integration**: Uses Google's Gemini 2.5 Flash model for content generation
+- **NVIDIA BUILD Integration**: Uses NVIDIA-hosted models through LangChain `ChatNVIDIA` for content generation, with automatic fallback across the models listed in `NVIDIA_TEXT_MODELS`
 - **Multiple Variations**: Generates 3 different post variations for each request
 - **Platform-Specific**: Tailored content for different social media platforms
 
