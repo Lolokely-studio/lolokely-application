@@ -781,7 +781,7 @@ git commit -m "feat: add Vercel SPA rewrite and fail fast on missing VITE_API_UR
 
 ---
 
-### Task 6: DEPLOY.md
+### Task 6: DEPLOY.md — ✅ DONE
 
 A single document making it possible to redo the deployment from scratch without rereading the code.
 
@@ -792,7 +792,7 @@ A single document making it possible to redo the deployment from scratch without
 - Consumes: the settings and variables established in tasks 1 to 5.
 - Produces: nothing (terminal document).
 
-- [ ] **Step 1: Collect the real list of variables read by the code**
+- [x] **Step 1: Collect the real list of variables read by the code**
 
 Run:
 ```bash
@@ -801,7 +801,7 @@ grep -rn "import.meta.env" frontend/src
 ```
 Expected: the complete list to carry into the document's table. Every variable found here must appear in `DEPLOY.md`.
 
-- [ ] **Step 2: Write `DEPLOY.md`**
+- [x] **Step 2: Write `DEPLOY.md`**
 
 The document must contain, in this order:
 
@@ -860,7 +860,7 @@ The document must contain, in this order:
    | Render build fails on `psycopg2` | Python 3.13 used instead of 3.11.9 | Check that `backend/.python-version` is committed |
    | Worker killed during an AI generation | gunicorn `--timeout` too low | Confirm `--timeout 120` in the Start Command |
 
-- [ ] **Step 3: Check the completeness of the variables table**
+- [x] **Step 3: Check the completeness of the variables table**
 
 Run:
 ```bash
@@ -870,12 +870,29 @@ echo "--- check complete ---"
 ```
 Expected: no `MISSING` line, then `--- check complete ---`.
 
-- [ ] **Step 4: Check that `VITE_API_URL` is documented**
+That check only proves `.env.example` is covered. Acceptance criterion 6 is about
+what the *code* reads, which is a larger set — `.env.example` documents neither the
+NVIDIA tuning variables nor `VITE_API_URL`. Run this too:
+
+```bash
+{ grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils
+  grep -rho "_setting(['\"][A-Z_]*['\"]" backend/db.py
+  grep -rho "_env_float(['\"][A-Z_]*['\"]" backend/services/*.py
+  grep -rho "_env_int(['\"][A-Z_]*['\"]" backend/services/*.py
+  grep -rho "import.meta.env.[A-Z_]*" frontend/src | sed 's/.*env\./"/;s/$/"/'
+} | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/code_vars.txt
+while read v; do grep -q "\`$v\`" DEPLOY.md || echo "MISSING: $v"; done < /tmp/code_vars.txt
+echo "--- code-side check complete ---"
+```
+Expected: no `MISSING` line. `PORT` and `RENDER` count as documented because
+`DEPLOY.md` explains both in its `PORT` trap section.
+
+- [x] **Step 4: Check that `VITE_API_URL` is documented**
 
 Run: `grep -c 'VITE_API_URL' DEPLOY.md`
 Expected: a number ≥ 2.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add DEPLOY.md
