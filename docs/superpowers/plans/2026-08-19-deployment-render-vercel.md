@@ -494,7 +494,7 @@ git commit -m "fix: fail fast on missing CORS_ORIGINS and support Vercel preview
 
 ---
 
-### Task 4: DB_* environment variables + repo hygiene
+### Task 4: DB_* environment variables + repo hygiene — ✅ DONE
 
 Aligns `.env.example` with the canonical names introduced in `db.py`, switches to the Supabase pooler, and closes the `.gitignore` gap.
 
@@ -507,7 +507,7 @@ Aligns `.env.example` with the canonical names introduced in `db.py`, switches t
 - Consumes: the variable names read by `backend/db.py` (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_POOL_MIN`, `DB_POOL_MAX`) and by `backend/app.py` (`CORS_ORIGINS`, `CORS_ALLOW_VERCEL_PREVIEWS`).
 - Produces: the reference list of variables, reused as-is by `DEPLOY.md` in task 6.
 
-- [ ] **Step 1: Fix the root `.gitignore`**
+- [x] **Step 1: Fix the root `.gitignore`**
 
 `.pytest_cache/` was already added to `.gitignore` along with the test suite. What remains is handling the `.env` files.
 
@@ -526,7 +526,7 @@ backend/.venv
 
 `.env.local`, `.env.production` and `.env.render` were covered nowhere, neither at the root nor in `backend/`.
 
-- [ ] **Step 2: Check that the rule does catch the variants**
+- [x] **Step 2: Check that the rule does catch the variants**
 
 Run:
 ```bash
@@ -536,12 +536,12 @@ rm .env.local backend/.env.production
 ```
 Expected: `NO .env file visible to git`
 
-- [ ] **Step 3: Check that `.env.example` stays tracked**
+- [x] **Step 3: Check that `.env.example` stays tracked**
 
 Run: `git check-ignore -v backend/.env.example || echo "backend/.env.example NOT ignored (correct)"`
 Expected: `backend/.env.example NOT ignored (correct)`
 
-- [ ] **Step 4: Rewrite `backend/.env.example`**
+- [x] **Step 4: Rewrite `backend/.env.example`**
 
 ```bash
 # CORS (comma-separated frontend origins)
@@ -583,27 +583,39 @@ NVIDIA_TEXT_MODELS=nvidia/nemotron-3-ultra-550b-a55b,minimaxai/minimax-m3,z-ai/g
 # Optional: NVIDIA_VISION_MODEL, NVIDIA_TEMPERATURE
 ```
 
-- [ ] **Step 5: Audit git history for committed secrets**
+- [x] **Step 5: Audit git history for committed secrets**
 
 Run: `git log --all --full-history --oneline -- backend/.env frontend/.env.local`
 Expected: no output.
 
+**Audit result (2026-08-20): clean.** Only `backend/.env.example` and `frontend/.env.example` were ever committed (in `f7190e4`), and a sweep of all history for `nvapi-`, JWT-shaped tokens, `SERVICE_ROLE_KEY=` and password assignments found nothing. No rotation needed; record this in `DEPLOY.md`.
+
 If commits show up: the Supabase and NVIDIA keys are to be considered compromised and rotated. History rewriting is a separate subject, to be decided separately — note it in `DEPLOY.md` in task 6, do not start it here.
 
-- [ ] **Step 6: Check that no variable read by the code is missing from `.env.example`**
+- [x] **Step 6: Check that no variable read by the code is missing from `.env.example`**
 
 Run:
 ```bash
-grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils \
-  | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/used.txt
+{ grep -rho "os.getenv(['\"][A-Z_]*['\"]" backend/app.py backend/db.py backend/services backend/routes backend/utils
+  grep -rho "_setting(['\"][A-Z_]*['\"]" backend/db.py
+} | sed "s/.*[\"']\([A-Z_]*\)[\"'].*/\1/" | sort -u > /tmp/used.txt
 grep -o '^[A-Z_]*=' backend/.env.example | tr -d '=' | sort -u > /tmp/documented.txt
 comm -23 /tmp/used.txt /tmp/documented.txt
 ```
-Expected: no output (every variable read by the code is documented).
+Expected: only `NVIDIA_VISION_MODEL`, `PORT` and `RENDER`, explained below.
 
-The legacy names (`USER_DB`, `PASSWORD_DB`, `HOST`, `PORT`, `DBNAME`) will appear in `used.txt` because `db.py` still accepts them as a fallback — that is expected. If they show up here, ignore them explicitly rather than reintroducing them into `.env.example`.
+The `_setting(` grep is required, not optional: `db.py` reads `DB_USER`, `DB_PASSWORD`,
+`DB_HOST` and `DB_NAME` through that helper rather than through `os.getenv` directly.
+Checking only `os.getenv` silently misses all four and reports a false clean result.
 
-- [ ] **Step 7: Update the local `backend/.env` (outside the commit)**
+Three names are expected to remain uncovered:
+
+- `NVIDIA_VISION_MODEL` — documented as a comment (`# Optional: ...`), not as an assignment.
+- `PORT` — only read as the legacy fallback for `DB_PORT`. Do not reintroduce it into
+  `.env.example`: on Render it is the reserved HTTP port variable.
+- `RENDER` — set by the platform itself, never by the user.
+
+- [x] **Step 7: Update the local `backend/.env` (outside the commit)**
 
 Manually rename in `backend/.env`: `USER_DB`→`DB_USER`, `PASSWORD_DB`→`DB_PASSWORD`, `HOST`→`DB_HOST`, `PORT`→`DB_PORT`, `DBNAME`→`DB_NAME`. The `db.py` fallback makes this step non-blocking locally, but it avoids keeping two conventions around.
 
@@ -618,7 +630,7 @@ close_pool()
 ```
 Expected: `DB OK -> 1`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add .gitignore backend/.env.example
