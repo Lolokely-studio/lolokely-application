@@ -17,7 +17,7 @@
 - Python version: **3.11.9** exactly. Otherwise Render uses Python 3.13, on which `psycopg2-binary==2.9.7` has no wheel and the build fails.
 - **Do not bump any version** of Flask / Werkzeug / marshmallow. We lock what exists as it runs locally.
 - `DB_POOL_MAX` must stay **≥ the number of gunicorn threads per worker** (psycopg2 raises `PoolError` instead of waiting).
-- Tests live in `backend/tests/` and run with `uv run pytest` (or `./venv/bin/python -m pytest` before task 1). `backend/tests/test_db.py` already exists: **14 tests, all green**. Do not break it.
+- Tests live in `backend/tests/` and run with `uv run pytest` (the pre-uv `backend/venv` has been deleted). `backend/tests/test_db.py` already exists: **14 tests, all green**. Do not break it.
 - pytest is a **development-only** dependency. The Render build command must therefore be `uv sync --frozen --no-dev`, otherwise uv installs pytest in production.
 - Deliberately narrow test scope: `db.py` and the configuration of `create_app()` (CORS guard, `/healthz`). **Do not** write tests for the business routes nor for the AI services — out of scope, see "Testing strategy" in the spec.
 - A test must fail when the behavior it describes is broken. After writing a test, run it once against the unmodified code to see it fail.
