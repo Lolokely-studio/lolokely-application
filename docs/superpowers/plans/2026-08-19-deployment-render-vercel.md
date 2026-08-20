@@ -639,18 +639,19 @@ git commit -m "chore: document DB_* env vars, Supabase pooler and tighten .env i
 
 ---
 
-### Task 5: Frontend — Vercel SPA rewrite + VITE_API_URL guard
+### Task 5: Frontend — Vercel SPA rewrite + VITE_API_URL guard — ✅ DONE
 
 **Files:**
 - Create: `frontend/vercel.json`
 - Modify: `frontend/src/services/api.js:3`
+- Modify: `frontend/vite.config.js` (build-time guard — see step 5)
 - Modify: `frontend/.env.example`
 
 **Interfaces:**
 - Consumes: nothing from the backend (the contract is the `VITE_API_URL` URL).
 - Produces: a `frontend/dist` static build served by Vercel with an SPA fallback.
 
-- [ ] **Step 1: Create `frontend/vercel.json`**
+- [x] **Step 1: Create `frontend/vercel.json`**
 
 ```json
 {
@@ -662,7 +663,7 @@ git commit -m "chore: document DB_* env vars, Supabase pooler and tighten .env i
 
 Existing static files (`/assets/*`) are served before the rewrites: only routes with no matching file fall back to `index.html`, which is exactly the behavior wanted for `react-router-dom`.
 
-- [ ] **Step 2: Add the guard in `frontend/src/services/api.js`**
+- [x] **Step 2: Add the guard in `frontend/src/services/api.js`**
 
 Replace line 3:
 
@@ -685,7 +686,7 @@ if (!API_BASE_URL) {
 
 Without this guard, `baseURL` is `undefined`, axios falls back to relative URLs, and the calls go to the Vercel domain where they receive `index.html` — HTML where JSON is expected, with symptoms very far from the cause.
 
-- [ ] **Step 3: Complete `frontend/.env.example`**
+- [x] **Step 3: Complete `frontend/.env.example`**
 
 ```
 # API base URL, including the /api suffix
@@ -694,23 +695,73 @@ Without this guard, `baseURL` is `undefined`, axios falls back to relative URLs,
 VITE_API_URL=http://localhost:5000/api
 ```
 
-- [ ] **Step 4: Check that the build passes with the variable defined**
+- [x] **Step 4: Check that the build passes with the variable defined**
 
 Run: `cd frontend && npm run build`
 Expected: `✓ built in ...`, and creation of `frontend/dist/index.html`.
 
-- [ ] **Step 5: Check that the build fails explicitly without the variable**
+- [x] **Step 5: Add a build-time guard, and check the build fails without the variable**
 
-Run:
-```bash
-cd frontend && mv .env.local .env.local.bak && VITE_API_URL= npm run build; \
-  mv .env.local.bak .env.local
+The guard added in step 2 runs at *module load*. Vite only bundles that module, it
+never evaluates it, so a missing `VITE_API_URL` cannot fail the build: it inlines an
+empty string, the minifier folds the check into an unconditional `throw`, and the
+broken bundle ships. The failure then lands in a visitor's browser console rather
+than in the Vercel build log. A runtime guard alone does not satisfy the spec goal
+of failing at build/startup, so add a second guard that runs during the build.
+
+Replace `frontend/vite.config.js` with:
+
+```javascript
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig(({ mode }) => {
+  // Fail the build, not the browser. The guard in src/services/api.js runs at
+  // module load: Vite only bundles that module, it never evaluates it, so a
+  // missing VITE_API_URL would ship a bundle that throws on first page load
+  // instead of showing up in the Vercel build log. This check runs during the
+  // build itself. loadEnv also reads process.env, which is how Vercel and
+  // Render pass the variable.
+  const env = loadEnv(mode, process.cwd(), '')
+  if (!env.VITE_API_URL) {
+    throw new Error(
+      'VITE_API_URL is not defined. Set it in frontend/.env.local for local dev, ' +
+        'or in the Vercel project settings (Production and Preview) for deploys.',
+    )
+  }
+
+  return {
+    plugins: [react()],
+  }
+})
 ```
-Expected: the build fails with the message `VITE_API_URL is not defined...`.
 
-If the build **succeeds**, Vite inlined a value from another `.env` file — check which one before continuing.
+Keep the `api.js` guard as well: it still covers a variable set to an empty string
+at runtime, and it names the same variable.
 
-- [ ] **Step 6: Check that a deep route renders locally**
+Then verify all three cases:
+
+```bash
+cd frontend
+mv .env.local .env.local.bak
+npm run build >/dev/null 2>&1; echo "missing var  -> exit $?"
+VITE_API_URL=https://example.onrender.com/api npm run build >/dev/null 2>&1; echo "via process.env -> exit $?"
+mv .env.local.bak .env.local
+npm run build >/dev/null 2>&1; echo "local dev    -> exit $?"
+```
+Expected:
+```
+missing var  -> exit 1
+via process.env -> exit 0
+local dev    -> exit 0
+```
+
+The middle case matters: Vercel passes the variable through `process.env`, not
+through a `.env` file. A guard that only reads `.env` files would fail every
+Vercel build.
+
+- [x] **Step 6: Check that a deep route renders locally**
 
 Run:
 ```bash
@@ -721,10 +772,10 @@ Expected: the page loads, no 404.
 
 `vite preview` already applies an SPA fallback; this test validates the router, while `vercel.json` brings the same behavior on the Vercel side. Stop the server afterwards.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
-git add frontend/vercel.json frontend/src/services/api.js frontend/.env.example
+git add frontend/vercel.json frontend/src/services/api.js frontend/vite.config.js frontend/.env.example
 git commit -m "feat: add Vercel SPA rewrite and fail fast on missing VITE_API_URL"
 ```
 
