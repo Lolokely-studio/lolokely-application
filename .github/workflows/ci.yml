@@ -1,0 +1,74 @@
+name: CI
+
+# Render and Vercel deploy on their own webhooks — this workflow does not
+# deploy anything. It is the gate: make these two jobs required checks on
+# `main` (Settings → Branches → branch protection) so no PR reaches the branch
+# both platforms build from without the tests and the build passing first.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to the same branch supersedes the previous run. `main` is exempt:
+# its runs are the record of what was deployed, so they are left to finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: backend
+          enable-cache: true
+      # No python-version here on purpose: backend/.python-version pins 3.11.9
+      # and uv reads it, so CI resolves the interpreter from the same file
+      # Render does. Setting it twice invites the two from drifting apart.
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: uv run pytest -q
+
+  frontend:
+    name: frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        # vite.config.js refuses to build without VITE_API_URL. The real value
+        # lives in the Vercel project settings; this placeholder only proves the
+        # bundle compiles. The artifact is discarded — CI never deploys.
+        run: npm run build
+        env:
+          VITE_API_URL: https://ci.invalid/api

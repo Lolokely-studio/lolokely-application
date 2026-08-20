@@ -26,4 +26,13 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // Build-time config files run under Node, not in the browser: they read
+    // `process.env` and `process.cwd()`. Without this block they inherit only
+    // the browser globals above and `process` reports as undefined.
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

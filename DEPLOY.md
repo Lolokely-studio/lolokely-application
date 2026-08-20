@@ -4,9 +4,9 @@ A step-by-step runbook for deploying this application from scratch. Backend on
 Render (native Python runtime, gunicorn), frontend on Vercel (static Vite
 build), database on the existing Supabase Postgres project.
 
-Sections 1–5 are the walkthrough, in order. Sections 6–10 are reference: the
-full variable table, security notes, the `PORT` trap, troubleshooting, and
-routine operations.
+Sections 1–5 are the walkthrough, in order. Sections 6–11 are reference: the
+full variable table, security notes, the `PORT` trap, troubleshooting, routine
+operations, and the CI gate.
 
 Design rationale: `docs/superpowers/specs/2026-08-19-deployment-render-vercel-design.md`
 
@@ -50,10 +50,13 @@ Confirm the branch you are deploying is pushed and green:
 
 ```bash
 cd backend && uv sync --frozen && uv run pytest -q   # expect: 23 passed
-cd ../frontend && npm run build                      # expect: ✓ built in ...
+cd ../frontend && npm run lint && npm run build      # expect: no output, then ✓ built in ...
 cd .. && git status --short                          # expect: clean
 git push origin main
 ```
+
+GitHub Actions runs those same three commands on every pull request (§11), so
+on a merged PR this is a confirmation rather than a discovery.
 
 Confirm these four files are committed — the deploy depends on each:
 
@@ -490,7 +493,8 @@ as a local fallback, but do not use them on Render.
 
 ### Redeploying
 
-Both platforms auto-deploy on push to their production branch (`main`).
+Both platforms auto-deploy on push to their production branch (`main`), each on
+its own webhook and independently of the other — and independently of CI (§11).
 Manual redeploys: Render → **Manual Deploy** → **Deploy latest commit**;
 Vercel → **Deployments** → pick a deployment → **Redeploy**.
 
@@ -541,3 +545,55 @@ out — expected, but do it deliberately.
   Treat an uptime pinger as a trade-off, not a default.
 - Supabase free caps direct connections at roughly 60 — the reason for using
   the pooler in §1.
+
+---
+
+## 11. Continuous integration
+
+`.github/workflows/ci.yml` runs two jobs — `backend (pytest)` and
+`frontend (lint + build)` — on every pull request targeting `main` and on every
+push to `main`.
+
+**It does not deploy.** Render and Vercel each watch the repository through
+their own GitHub App and rebuild on their own webhook; nothing in this workflow
+talks to either platform. CI exists only to keep a broken commit from reaching
+the branch they build from.
+
+That separation has one consequence worth stating plainly: **a direct push to
+`main` deploys whether CI passes or not.** The workflow observes; it does not
+block. Blocking is a repository setting:
+
+> Settings → Branches → Add branch ruleset (or branch protection rule) for
+> `main` → require a pull request before merging, and require the status checks
+> `backend (pytest)` and `frontend (lint + build)` to pass.
+
+Without that rule the workflow is a red X on a commit that is already live.
+
+Two details in the workflow that are deliberate:
+
+- **No `paths:` filter.** Both jobs run even for a change that touches only one
+  half of the repository. A filtered job reports *skipped*, and a required check
+  that never runs leaves the PR waiting forever. Both suites finish in well
+  under a minute; the filter is not worth the failure mode.
+- **`VITE_API_URL: https://ci.invalid/api`.** `frontend/vite.config.js` refuses
+  to build without it (§4). CI supplies a throwaway value because it only needs
+  to prove the bundle compiles — the build output is discarded, never deployed.
+  The real value lives in the Vercel project settings.
+
+### The full path from commit to production
+
+```
+feature branch → pull request
+   ├─ GitHub Actions   pytest + lint + build      ← blocking, once the rule is set
+   └─ Vercel           preview URL on the PR      ← CORS_ORIGINS does not cover it
+                                                     unless CORS_ALLOW_VERCEL_PREVIEWS=true (§5)
+        ↓ merge to main
+   ├─ Render   rebuild → /healthz must answer 200 → traffic switches
+   └─ Vercel   rebuild → production domain
+```
+
+Render only switches traffic once the new instance answers the health check, so
+a backend that fails to boot leaves the previous version serving. Vercel keeps
+the previous deployment live if the build fails. Neither is atomic *across* the
+two, though: for a few seconds after a merge, a new frontend can be talking to
+the old backend. Ship breaking API changes backend-first.
