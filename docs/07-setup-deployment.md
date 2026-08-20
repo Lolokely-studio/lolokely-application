@@ -5,16 +5,25 @@
 1. [Prerequisites](#prerequisites)
 2. [Local Development Setup](#local-development-setup)
 3. [Environment Configuration](#environment-configuration)
-4. [Database Setup](#database-setup)
-5. [Running the Application](#running-the-application)
-6. [Production Deployment](#production-deployment)
-7. [Troubleshooting](#troubleshooting)
+4. [Running the Application](#running-the-application)
+5. [Production Deployment](#production-deployment)
+6. [Troubleshooting](#troubleshooting)
+7. [Security Checklist](#security-checklist)
+8. [Maintenance](#maintenance)
+9. [Support](#support)
+
+> **Deploying?** `DEPLOY.md` at the repository root is the authoritative,
+> step-by-step procedure for Render + Vercel. This guide covers local
+> development; its Production Deployment section is a summary of that document.
 
 ## Prerequisites
 
 ### Required Software
 
-- **Python 3.11+**: For backend development
+- **Python 3.11.9**: For backend development — pinned by `backend/.python-version`
+  (`psycopg2-binary 2.9.7` has no wheel for Python 3.13)
+- **uv**: Python dependency manager — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  (it can install the pinned Python for you)
 - **Node.js 18+**: For frontend development
 - **npm** or **yarn**: Package manager
 - **PostgreSQL**: Database (or use Supabase cloud)
@@ -24,6 +33,7 @@
 
 - **Supabase Account**: For PostgreSQL database (or self-hosted PostgreSQL)
 - **NVIDIA Build Account**: For NVIDIA API key ([Get API Key](https://build.nvidia.com/))
+- **Render Account** and **Vercel Account**: For deployment — see `DEPLOY.md`
 
 ## Local Development Setup
 
@@ -42,37 +52,45 @@ cd lolokely-application
 cd backend
 ```
 
-#### 2.2 Create Virtual Environment
-
-**On macOS/Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**On Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-#### 2.3 Install Dependencies
+#### 2.2 Install Dependencies
 
 ```bash
-pip install -r requirements.txt
+uv sync --frozen
 ```
 
-#### 2.4 Create Environment File
+uv creates `backend/.venv` from `uv.lock`, on the Python version pinned in
+`.python-version`. There is no virtualenv to create or activate by hand and no
+`requirements.txt` — prefix commands with `uv run` and uv uses that environment.
+
+`--frozen` installs exactly what the lockfile says and fails rather than silently
+re-resolving. To change a dependency, edit `pyproject.toml`, run `uv lock`, and
+commit the updated `uv.lock`.
+
+#### 2.3 Create Environment File
 
 Create a `.env` file in the `backend/` directory:
 
+Start from the template, which is the authoritative list:
+
+```bash
+cp .env.example .env
+```
+
 ```env
-# Database Configuration
-USER_DB=your_database_user
-PASSWORD_DB=your_database_password
-HOST=your_database_host
-PORT=5432
-DBNAME=your_database_name
+# Database Configuration — Supabase Supavisor (transaction pooler)
+# The pooler user is postgres.<project-ref>, NOT plain postgres
+DB_USER=postgres.your_project_ref
+DB_PASSWORD=your_database_password
+DB_HOST=aws-0-<region>.pooler.supabase.com
+DB_PORT=6543
+DB_NAME=postgres
+
+# Connection pool — keep DB_POOL_MAX >= the gunicorn threads per worker
+DB_POOL_MIN=1
+DB_POOL_MAX=5
+
+# CORS — required; the app raises RuntimeError at startup if unset
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 
 # Security Keys
 SECRET_KEY=your-secret-key-here-change-in-production
@@ -86,10 +104,10 @@ NVIDIA_API_KEY=nvapi-your_key_here
 **Generate Secret Keys:**
 ```bash
 # Generate SECRET_KEY
-python -c "import secrets; print(secrets.token_hex(32))"
+uv run python -c "import secrets; print(secrets.token_hex(32))"
 
 # Generate JWT_SECRET_KEY
-python -c "import secrets; print(secrets.token_hex(32))"
+uv run python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 ### Step 3: Frontend Setup
@@ -169,11 +187,15 @@ Expected tables:
 
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| `USER_DB` | Database username | Yes | `postgres` |
-| `PASSWORD_DB` | Database password | Yes | `your_password` |
-| `HOST` | Database host | Yes | `db.xxxxx.supabase.co` |
-| `PORT` | Database port | Yes | `5432` |
-| `DBNAME` | Database name | Yes | `postgres` |
+| `DB_USER` | Database username | Yes | `postgres.abcdefghijklm` |
+| `DB_PASSWORD` | Database password | Yes | `your_password` |
+| `DB_HOST` | Database host | Yes | `aws-0-eu-west-3.pooler.supabase.com` |
+| `DB_PORT` | Database port | Yes | `6543` (pooler) / `5432` (direct) |
+| `DB_NAME` | Database name | Yes | `postgres` |
+| `DB_POOL_MIN` | Pool minimum | No | `1` |
+| `DB_POOL_MAX` | Pool maximum — keep `>=` gunicorn threads | No | `5` |
+| `CORS_ORIGINS` | Comma-separated frontend origins | Yes | `http://localhost:5173` |
+| `CORS_ALLOW_VERCEL_PREVIEWS` | Allow every `*.vercel.app` origin | No | empty / `true` |
 | `SECRET_KEY` | Flask secret key | Yes | `generated_key` |
 | `JWT_SECRET_KEY` | JWT secret key | Yes | `generated_key` |
 | `NVIDIA_API_KEY` | NVIDIA API Catalog key | Yes | `nvapi-...` |
@@ -201,11 +223,13 @@ Expected tables:
 
 ```bash
 cd backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-python app.py
+uv run python app.py
 ```
 
-Backend will run on `http://localhost:5000`
+Backend will run on `http://localhost:5000`. Check it with
+`curl http://localhost:5000/healthz`, which answers `{"status": "ok"}`.
+
+To run the tests: `uv run pytest`.
 
 #### Start Frontend Server
 
@@ -238,159 +262,96 @@ chmod +x setup.sh
 
 ### Backend Deployment
 
-#### Option 1: Using Gunicorn (Recommended)
+**This project deploys to Render, and `DEPLOY.md` at the repository root is the
+authoritative procedure** — exact settings, the full environment variable table,
+the Supabase pooler credentials, and the expected failure modes. What follows is
+a summary only; where the two disagree, `DEPLOY.md` wins.
 
-1. **Install Gunicorn:**
-```bash
-pip install gunicorn
-```
+| Setting | Value |
+|---|---|
+| Runtime | Python 3 (native, not Docker) |
+| Root Directory | `backend` |
+| Branch | `develop` |
+| Build Command | `uv sync --frozen --no-dev` |
+| Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
+| Health Check Path | `/healthz` |
 
-2. **Create Gunicorn Config:**
-Create `gunicorn_config.py`:
-```python
-bind = "0.0.0.0:5000"
-workers = 4
-worker_class = "sync"
-timeout = 120
-keepalive = 5
-```
+Three details that are easy to get wrong:
 
-3. **Run with Gunicorn:**
-```bash
-gunicorn -c gunicorn_config.py "app:create_app()"
-```
+- **`wsgi:app`, not `app:create_app()`.** `app.py` builds the application only
+  under `if __name__ == '__main__'`, so there is no module-level `app` for a WSGI
+  server to import. `backend/wsgi.py` provides it.
+- **`--no-dev` on both commands.** `uv run` re-syncs before executing and
+  includes the dev group by default, so putting it only on the build command
+  means pytest is reinstalled at every boot.
+- **`PORT` is the platform's HTTP port**, not the database port. The Postgres
+  port is `DB_PORT`; `db.py` raises an explicit error if you confuse the two.
 
-#### Option 2: Using uWSGI
-
-1. **Install uWSGI:**
-```bash
-pip install uwsgi
-```
-
-2. **Create uWSGI Config:**
-Create `uwsgi.ini`:
-```ini
-[uwsgi]
-module = app:create_app()
-callable = app
-http = 0.0.0.0:5000
-processes = 4
-threads = 2
-```
-
-3. **Run with uWSGI:**
-```bash
-uwsgi uwsgi.ini
-```
-
-#### Deployment Platforms
-
-**Heroku:**
-1. Install Heroku CLI
-2. Create `Procfile`:
-```
-web: gunicorn -w 4 -b 0.0.0.0:$PORT "app:create_app()"
-```
-3. Deploy:
-```bash
-heroku create your-app-name
-git push heroku main
-```
-
-**Railway:**
-1. Connect GitHub repository
-2. Set environment variables
-3. Deploy automatically
-
-**Render:**
-1. Create new Web Service
-2. Connect repository
-3. Configure build and start commands
-4. Set environment variables
-
-**DigitalOcean App Platform:**
-1. Create new app
-2. Connect repository
-3. Configure environment
-4. Deploy
+Running under any other host (Heroku, Railway, Fly, a plain VM) works the same
+way — the WSGI entrypoint and the gunicorn flags above are not Render-specific.
 
 ### Frontend Deployment
 
-#### Build for Production
+The frontend deploys to Vercel as a static Vite build. Again, `DEPLOY.md` holds
+the authoritative settings.
 
 ```bash
 cd frontend
-npm run build
+npm run build     # produces dist/
 ```
 
-This creates an optimized build in the `dist/` directory.
+| Setting | Value |
+|---|---|
+| Framework Preset | Vite |
+| Root Directory | `frontend` |
+| Production Branch | `develop` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
 
-#### Deployment Platforms
+Two requirements for any static host, not only Vercel:
 
-**Vercel:**
-```bash
-npm install -g vercel
-vercel
-```
-
-**Netlify:**
-1. Connect GitHub repository
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Deploy
-
-**GitHub Pages:**
-1. Install `gh-pages`:
-```bash
-npm install --save-dev gh-pages
-```
-2. Add to `package.json`:
-```json
-{
-  "scripts": {
-    "deploy": "npm run build && gh-pages -d dist"
-  }
-}
-```
-3. Deploy:
-```bash
-npm run deploy
-```
-
-**Static Hosting:**
-- Upload `dist/` contents to:
-  - AWS S3 + CloudFront
-  - Google Cloud Storage
-  - Azure Static Web Apps
-  - Any static hosting service
+- **SPA fallback.** The app uses `react-router-dom`, so a direct hit on
+  `/dashboard` must serve `index.html` rather than 404. `frontend/vercel.json`
+  does this on Vercel; on another host, configure the equivalent rewrite.
+- **`VITE_API_URL` must be set at build time**, on Production *and* Preview
+  environments. It is baked into the bundle — setting it afterwards has no
+  effect without a rebuild. The build fails with an explicit message if it is
+  missing (the check lives in `frontend/vite.config.js`).
 
 ### Environment Variables in Production
 
-#### Backend
+`DEPLOY.md` carries the full table — every variable, which service it belongs to
+(Render or Vercel), whether it is secret, and an example value. The essentials:
 
-Set environment variables on your hosting platform:
+#### Backend (Render)
 
-- **Heroku:**
-```bash
-heroku config:set SECRET_KEY=your_key
-heroku config:set JWT_SECRET_KEY=your_key
-heroku config:set NVIDIA_API_KEY=your_key
+Set them in the service's **Environment** tab. Required: `CORS_ORIGINS`,
+`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `SECRET_KEY`,
+`JWT_SECRET_KEY`, and `NVIDIA_API_KEY` for the AI routes.
+
+`CORS_ORIGINS` must hold the deployed frontend URL. It is read once at startup,
+so changing it requires a redeploy to take effect.
+
+#### Frontend (Vercel)
+
+Only `VITE_API_URL`, set on **Production and Preview**, pointing at the backend
+with the `/api` suffix:
+
+```
+VITE_API_URL=https://<your-service>.onrender.com/api
 ```
 
-- **Railway/Render:**
-Use the platform's environment variable settings in the dashboard.
+It is inlined into the bundle at build time, so a change requires a rebuild.
 
-#### Frontend
+**Anything prefixed `VITE_` is public** — it ships in plaintext inside the
+JavaScript delivered to browsers. Never put a secret behind that prefix;
+`NVIDIA_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` belong on Render only.
 
-Set environment variables during build or in hosting platform:
+#### Deployment order
 
-- **Vercel/Netlify:**
-Add environment variables in project settings.
-
-- **Build-time:**
-```bash
-VITE_API_URL=https://api.yourdomain.com/api npm run build
-```
+The two services reference each other, so break the cycle: deploy the backend
+first with a placeholder `CORS_ORIGINS`, deploy the frontend using the resulting
+Render URL, then set `CORS_ORIGINS` to the Vercel URL and redeploy the backend.
 
 ### Database Setup in Production
 
@@ -412,19 +373,21 @@ VITE_API_URL=https://api.yourdomain.com/api npm run build
 
 ### SSL/TLS Configuration
 
-1. **Obtain SSL Certificate:**
-   - Let's Encrypt (free)
-   - Cloud provider certificates
-   - Commercial certificates
+On Render and Vercel this is handled for you: both terminate TLS and serve HTTPS
+on their default domains, including for custom domains added through their
+dashboards. There is no certificate to obtain or renew, and no HTTP→HTTPS
+redirect to configure.
 
-2. **Configure HTTPS:**
-   - Use reverse proxy (Nginx, Caddy)
-   - Configure SSL termination
-   - Redirect HTTP to HTTPS
+The database connection is separately encrypted — `db.py` always sets
+`sslmode="require"`.
 
-### Reverse Proxy Setup (Nginx)
+### Reverse Proxy Setup (self-hosting only)
 
-Example Nginx configuration:
+Not needed on Render or Vercel — the platform is the proxy. gunicorn binds the
+port given in `$PORT` and the platform routes to it.
+
+If you self-host instead, put a reverse proxy in front of gunicorn and terminate
+TLS there:
 
 ```nginx
 server {
@@ -450,6 +413,9 @@ server {
 }
 ```
 
+In that setup you also serve the frontend's `dist/` yourself, with the SPA
+fallback described under Frontend Deployment.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -471,8 +437,11 @@ Error: could not connect to server
 ModuleNotFoundError: No module named 'flask'
 ```
 **Solution:**
-- Activate virtual environment
-- Install dependencies: `pip install -r requirements.txt`
+- Run commands through `uv run` (`uv run python app.py`, `uv run pytest`), which
+  uses `backend/.venv` automatically
+- Re-sync the environment: `uv sync --frozen`
+- If it only affects pytest, the environment was last synced with `--no-dev`;
+  `uv sync --frozen` restores the dev group
 
 **3. JWT Token Error**
 ```
@@ -578,14 +547,22 @@ Error: Cannot find module
 
 1. **Update Dependencies:**
    ```bash
-   # Backend
-   pip list --outdated
-   pip install --upgrade package_name
-   
+   # Backend — edit the pin in pyproject.toml, then re-lock
+   cd backend
+   uv lock --upgrade-package <package_name>
+   uv sync --frozen
+   uv run pytest          # confirm nothing broke
+   # commit the updated uv.lock
+
    # Frontend
+   cd ../frontend
    npm outdated
    npm update
    ```
+
+   Always commit `backend/uv.lock` alongside `pyproject.toml`: the deploy runs
+   `uv sync --frozen`, which installs exactly what the lockfile pins and fails
+   rather than re-resolving.
 
 2. **Database Maintenance:**
    - Regular backups

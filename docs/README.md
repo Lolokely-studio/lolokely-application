@@ -24,7 +24,7 @@ Lolokely is a full-stack web application that combines **task management** capab
 
 - **Task Management**: Create, assign, and track tasks with subtasks
 - **Team Collaboration**: Assign tasks to multiple team members
-- **AI-Powered Post Generation**: Generate social media posts using Google Gemini AI
+- **AI-Powered Post Generation**: Generate social media posts using NVIDIA-hosted models (LangChain `ChatNVIDIA`)
 - **Real-time Notifications**: Get notified about task assignments and updates
 - **User Preferences**: System learns from your choices to improve suggestions
 
@@ -34,7 +34,7 @@ Lolokely is a full-stack web application that combines **task management** capab
 - **Framework**: Flask (Python)
 - **Database**: PostgreSQL (Supabase)
 - **Authentication**: JWT (Flask-JWT-Extended)
-- **AI Integration**: Google Generative AI (Gemini)
+- **AI Integration**: NVIDIA BUILD API via `langchain-nvidia-ai-endpoints`
 - **Validation**: Marshmallow
 
 ### Frontend
