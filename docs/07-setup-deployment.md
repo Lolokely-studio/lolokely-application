@@ -271,7 +271,7 @@ a summary only; where the two disagree, `DEPLOY.md` wins.
 |---|---|
 | Runtime | Python 3 (native, not Docker) |
 | Root Directory | `backend` |
-| Branch | `develop` |
+| Branch | `main` |
 | Build Command | `uv sync --frozen --no-dev` |
 | Start Command | `uv run --no-dev gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --timeout 120` |
 | Health Check Path | `/healthz` |
@@ -304,7 +304,7 @@ npm run build     # produces dist/
 |---|---|
 | Framework Preset | Vite |
 | Root Directory | `frontend` |
-| Production Branch | `develop` |
+| Production Branch | `main` |
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
 
