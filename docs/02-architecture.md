@@ -5,27 +5,29 @@
 Lolokely follows a **client-server architecture** with a clear separation between frontend and backend components. The application uses a RESTful API for communication between the client and server.
 
 ```
-┌─────────────────┐
-│   React Client  │
-│   (Frontend)    │
-└────────┬────────┘
-         │ HTTP/REST
-         │
-┌────────▼────────┐
-│  Flask Server   │
-│   (Backend)     │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│   PostgreSQL    │
-│   (Database)    │
-└─────────────────┘
-         │
-┌────────▼────────┐
-│  Google Gemini  │
-│   (AI Service)  │
-└─────────────────┘
+┌─────────────────────┐
+│    React Client     │
+│  (Vite build, SPA)  │
+│   deployed: Vercel  │
+└──────────┬──────────┘
+           │ HTTP/REST — VITE_API_URL
+           │
+┌──────────▼──────────┐
+│    Flask Server     │
+│  (gunicorn, WSGI)   │
+│   deployed: Render  │
+└──────────┬──────────┘
+           │
+           ├──────────────────────┐
+           │                      │
+┌──────────▼──────────┐ ┌─────────▼──────────┐
+│  Supabase Postgres  │ │  NVIDIA BUILD API  │
+│ (Supavisor pooler,  │ │  (LangChain Chat-  │
+│  psycopg2 pool)     │ │   NVIDIA models)   │
+└─────────────────────┘ └────────────────────┘
 ```
+
+Deployment settings for both platforms live in `DEPLOY.md` at the repository root.
 
 ## Backend Architecture
 
@@ -33,9 +35,13 @@ Lolokely follows a **client-server architecture** with a clear separation betwee
 
 ```
 backend/
-├── app.py                 # Flask application factory
-├── db.py                  # Database connection management
-├── requirements.txt        # Python dependencies
+├── app.py                 # Flask application factory (+ /healthz)
+├── wsgi.py                # WSGI entrypoint used by gunicorn in production
+├── db.py                  # Pooled database connection management
+├── pyproject.toml         # Python dependencies (uv)
+├── uv.lock                # Locked dependency tree — committed
+├── .python-version        # Pinned runtime (3.11.9)
+├── tests/                 # pytest suite (db.py + app configuration)
 ├── routes/                # API route handlers
 │   ├── auth.py           # Authentication endpoints
 │   ├── tasks.py          # Task management endpoints
@@ -262,15 +268,22 @@ subtasks
 
 ## AI Integration
 
-### Google Gemini Integration
+### NVIDIA BUILD Integration
 
-The post generation feature integrates with Google's Gemini AI:
+Post generation and the CRM AI features call NVIDIA-hosted models through
+LangChain's `ChatNVIDIA` (`backend/services/nvidia_llm.py`). This replaced the
+earlier Google Gemini integration.
 
-1. **API Configuration**: API key from environment variables
-2. **Client Initialization**: Google GenAI client setup
-3. **Prompt Engineering**: Structured prompts for consistent output
-4. **Response Parsing**: JSON extraction and validation
-5. **Error Handling**: Fallback mechanisms for API failures
+1. **API Configuration**: `NVIDIA_API_KEY` from environment variables
+2. **Client Initialization**: `ChatNVIDIA` via `langchain-nvidia-ai-endpoints`
+3. **Model Fallback**: `NVIDIA_TEXT_MODELS` lists models tried in order
+4. **Prompt Engineering**: Structured prompts for consistent output
+5. **Response Parsing**: JSON extraction and validation
+6. **Error Handling**: Retries on rate-limit and capacity errors, then fallback
+   to the next model in the list
+
+Because these calls routinely take longer than gunicorn's 30 s default, the
+production start command sets `--timeout 120`. See `DEPLOY.md`.
 
 ### Post Generation Flow
 
@@ -281,7 +294,7 @@ User Input (theme, platform, tonality, etc.)
 Flask Route (/api/posts/generate)
     │
     ▼
-Gemini API Call
+NVIDIA model call (with fallback)
     │
     ▼
 Response Parsing (JSON extraction)

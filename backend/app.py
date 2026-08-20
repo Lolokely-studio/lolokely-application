@@ -1,9 +1,10 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 import os
+import re
 
 # Load environment variables
 load_dotenv()
@@ -37,11 +38,19 @@ def create_app():
     bcrypt.init_app(app)
 
     # CORS: allow frontend origins (comma-separated via CORS_ORIGINS)
-    cors_origins = [
-        origin.strip()
-        for origin in os.getenv('CORS_ORIGINS').split(',')
-        if origin.strip()
-    ]
+    cors_raw = os.getenv('CORS_ORIGINS')
+    if not cors_raw:
+        raise RuntimeError('CORS_ORIGINS must be set in the environment')
+    cors_origins = [origin.strip() for origin in cors_raw.split(',') if origin.strip()]
+    if not cors_origins:
+        raise RuntimeError('CORS_ORIGINS must contain at least one origin')
+
+    # Vercel preview URLs change on every deployment and cannot be listed in
+    # advance. Disabled by default: opening up the whole Vercel platform is a
+    # choice, not a reasonable default.
+    if os.getenv('CORS_ALLOW_VERCEL_PREVIEWS', '').strip().lower() in ('1', 'true', 'yes'):
+        cors_origins.append(re.compile(r'^https://.*\.vercel\.app$'))
+
     CORS(
         app,
         resources={r'/api/*': {'origins': cors_origins}},
@@ -77,6 +86,21 @@ def create_app():
     app.register_blueprint(company_financials_bp, url_prefix='/api/company-financials')
     app.register_blueprint(crm_ai_bp, url_prefix='/api/crm-ai')
     
+    # Health check (no auth): does not touch the database by default, otherwise
+    # a Supabase outage would make a healthy backend restart in a loop.
+    @app.route('/healthz')
+    def healthz():
+        if request.args.get('db') != '1':
+            return {'status': 'ok'}, 200
+        try:
+            from db import get_connection
+            with get_connection() as conn, conn.cursor() as cur:
+                cur.execute('SELECT 1')
+                cur.fetchone()
+        except Exception as exc:
+            return {'status': 'error', 'db': str(exc)}, 503
+        return {'status': 'ok', 'db': 'ok'}, 200
+
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):

@@ -2,6 +2,13 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+if (!API_BASE_URL) {
+  throw new Error(
+    'VITE_API_URL is not defined. Set it in frontend/.env.local for local dev, ' +
+      'or in the Vercel project settings (Production and Preview) for deploys.',
+  );
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
