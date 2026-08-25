@@ -501,7 +501,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="relative z-10 flex flex-col min-h-screen w-full">
+    <div className="flex flex-col min-h-screen w-full">
       <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-3 py-4 lg:px-6 lg:py-5">
         <header className="flex-shrink-0 mb-3 lg:mb-4">
           <div className="flex flex-col gap-3 lg:gap-4">
@@ -603,8 +603,8 @@ const Dashboard = () => {
                   type="button"
                   onClick={() => setShowGanttView((prev) => !prev)}
                   className={`inline-flex items-center justify-center rounded-xl border px-3 lg:px-4 text-xs lg:text-sm font-medium transition whitespace-nowrap w-full lg:w-auto ${showGanttView
-                      ? 'bg-primary-600/90 text-white border-primary-500 shadow-sm'
-                      : 'bg-surface text-muted hover:text-foreground border-border hover:bg-surface/80'
+                    ? 'bg-primary-600/90 text-white border-primary-500 shadow-sm'
+                    : 'bg-surface text-muted hover:text-foreground border-border hover:bg-surface/80'
                     }`}
                 >
                   {showGanttView ? 'Board View' : 'Gantt View'}

@@ -29,12 +29,12 @@ const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
     try {
       await register({
         first_name: formData.first_name,
@@ -49,20 +49,20 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="auth-page min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="auth-page min-h-screen flex items-center justify-center py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="relative z-10 w-full max-w-md">
-        <div className="glass-panel space-y-8 px-6 py-10 sm:px-10">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-40 w-40 items-center justify-center rounded-2xl overflow-hidden">
-              <img 
-                src={logoImage} 
-                alt="Lolokely Logo" 
+        <div className="glass-panel space-y-6 sm:space-y-8 px-5 py-6 sm:px-10 sm:py-10">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+            <div className="flex h-24 w-24 sm:h-36 sm:w-36 items-center justify-center rounded-2xl overflow-hidden">
+              <img
+                src={logoImage}
+                alt="Lolokely Logo"
                 className="h-full w-full object-contain"
               />
             </div>
             <div>
-              <h2 className="text-3xl font-semibold text-foreground">Create your Lolokely account</h2>
-              <p className="mt-2 text-sm text-muted">
+              <h2 className="text-xl sm:text-3xl font-semibold text-foreground">Create your Lolokely account</h2>
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted">
                 Already with us?{' '}
                 <a href="/login" className="font-semibold text-primary-600 hover:text-primary-500">
                   Sign in instead
@@ -71,17 +71,17 @@ const RegisterForm = () => {
             </div>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="alert-error">
+              <div className="alert-error text-xs sm:text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="first_name" className="text-sm font-medium text-muted">
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1 sm:space-y-2">
+                  <label htmlFor="first_name" className="text-xs sm:text-sm font-medium text-muted">
                     First name
                   </label>
                   <input
@@ -91,13 +91,13 @@ const RegisterForm = () => {
                     required
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="input-field"
+                    className="input-field text-sm"
                     placeholder="First name"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="last_name" className="text-sm font-medium text-muted">
+                <div className="space-y-1 sm:space-y-2">
+                  <label htmlFor="last_name" className="text-xs sm:text-sm font-medium text-muted">
                     Last name
                   </label>
                   <input
@@ -107,14 +107,14 @@ const RegisterForm = () => {
                     required
                     value={formData.last_name}
                     onChange={handleChange}
-                    className="input-field"
+                    className="input-field text-sm"
                     placeholder="Last name"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-muted">
+              <div className="space-y-1 sm:space-y-2">
+                <label htmlFor="email" className="text-xs sm:text-sm font-medium text-muted">
                   Email address
                 </label>
                 <input
@@ -125,14 +125,14 @@ const RegisterForm = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="input-field"
+                  className="input-field text-sm"
                   placeholder="Enter your email"
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-muted">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1 sm:space-y-2">
+                  <label htmlFor="password" className="text-xs sm:text-sm font-medium text-muted">
                     Password
                   </label>
                   <div className="relative">
@@ -144,8 +144,8 @@ const RegisterForm = () => {
                       required
                       value={formData.password}
                       onChange={handleChange}
-                      className="input-field pr-10"
-                      placeholder="Enter your password"
+                      className="input-field text-sm pr-10"
+                      placeholder="Enter password"
                     />
                     <button
                       type="button"
@@ -154,16 +154,16 @@ const RegisterForm = () => {
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
+                        <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
-                        <Eye className="h-5 w-5" />
+                        <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                       )}
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="confirmPassword" className="text-sm font-medium text-muted">
+                <div className="space-y-1 sm:space-y-2">
+                  <label htmlFor="confirmPassword" className="text-xs sm:text-sm font-medium text-muted">
                     Confirm password
                   </label>
                   <div className="relative">
@@ -175,8 +175,8 @@ const RegisterForm = () => {
                       required
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="input-field pr-10"
-                      placeholder="Confirm your password"
+                      className="input-field text-sm pr-10"
+                      placeholder="Confirm password"
                     />
                     <button
                       type="button"
@@ -185,9 +185,9 @@ const RegisterForm = () => {
                       aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5" />
+                        <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
-                        <Eye className="h-5 w-5" />
+                        <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                       )}
                     </button>
                   </div>
@@ -198,7 +198,7 @@ const RegisterForm = () => {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60 text-sm py-2.5"
             >
               {loading ? 'Creating account…' : 'Create account'}
             </button>
