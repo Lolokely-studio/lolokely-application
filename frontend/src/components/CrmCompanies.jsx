@@ -65,18 +65,18 @@ const CompanyForm = ({ company, onSubmit, onCancel, error }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-3 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onCancel()}
     >
       <div
-        className="glass-panel mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto px-6 py-6 sm:px-8"
+        className="glass-panel mx-0 sm:mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">
             {company ? 'Edit Company' : 'New Company'}
           </h2>
-          <button onClick={onCancel} className="text-muted transition hover:text-foreground" aria-label="Close">
+          <button onClick={onCancel} className="text-muted transition hover:text-foreground shrink-0" aria-label="Close">
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
@@ -89,41 +89,41 @@ const CompanyForm = ({ company, onSubmit, onCancel, error }) => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Company Name *</label>
-              <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="input-field" />
+              <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="input-field w-full" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Domain *</label>
-              <input type="text" name="domain" value={formData.domain} onChange={handleChange} required className="input-field" />
+              <input type="text" name="domain" value={formData.domain} onChange={handleChange} required className="input-field w-full" />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Country</label>
-              <input type="text" name="country" value={formData.country} onChange={handleChange} className="input-field" />
+              <input type="text" name="country" value={formData.country} onChange={handleChange} className="input-field w-full" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">City</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} className="input-field" />
+              <input type="text" name="city" value={formData.city} onChange={handleChange} className="input-field w-full" />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Region</label>
-              <input type="text" name="region" value={formData.region} onChange={handleChange} className="input-field" />
+              <input type="text" name="region" value={formData.region} onChange={handleChange} className="input-field w-full" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Website</label>
-              <input type="text" name="website" value={formData.website} onChange={handleChange} className="input-field" />
+              <input type="text" name="website" value={formData.website} onChange={handleChange} className="input-field w-full" />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Founded Year</label>
-              <input type="number" name="founded_year" value={formData.founded_year} onChange={handleChange} className="input-field" />
+              <input type="number" name="founded_year" value={formData.founded_year} onChange={handleChange} className="input-field w-full" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Company Type</label>
-              <input type="text" name="company_type" value={formData.company_type} onChange={handleChange} className="input-field" />
+              <input type="text" name="company_type" value={formData.company_type} onChange={handleChange} className="input-field w-full" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-muted">Status</label>
@@ -132,11 +132,11 @@ const CompanyForm = ({ company, onSubmit, onCancel, error }) => {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-muted">Notes</label>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="input-field" />
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="input-field w-full" />
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">{company ? 'Save Changes' : 'Create Company'}</button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
+            <button type="button" onClick={onCancel} className="btn-secondary w-full sm:w-auto">Cancel</button>
+            <button type="submit" className="btn-primary w-full sm:w-auto">{company ? 'Save Changes' : 'Create Company'}</button>
           </div>
         </form>
       </div>
@@ -297,17 +297,20 @@ const CrmCompanies = () => {
 
   return (
     <div className="relative z-10 min-h-screen pb-16">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-foreground">CRM</h1>
-            <p className="mt-2 text-muted">Pipeline de prospection</p>
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 w-full sm:w-auto max-w-[calc(100%-4.5rem)] sm:max-w-none">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground leading-tight">
+              CRM
+            </h1>
+            <p className="mt-1 text-sm sm:text-base text-muted">
+              Pipeline de prospection
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn-secondary whitespace-nowrap" onClick={() => setShowTop10(true)}>
-              Top 10 à contacter
-            </button>
-            <button type="button" onClick={() => { setEditingCompany(null); setFormError(null); setShowForm(true); }} className="btn-primary flex items-center gap-2 whitespace-nowrap">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">    <button type="button" className="btn-secondary whitespace-nowrap w-full sm:w-auto" onClick={() => setShowTop10(true)}>
+            Top 10 à contacter
+          </button>
+            <button type="button" onClick={() => { setEditingCompany(null); setFormError(null); setShowForm(true); }} className="btn-primary flex items-center justify-center gap-2 whitespace-nowrap w-full sm:w-auto">
               <PlusIcon className="h-5 w-5" />
               New Company
             </button>
@@ -332,7 +335,7 @@ const CrmCompanies = () => {
                 placeholder="Search by name, domain, city, or country..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-field !pl-11 !pr-12 !py-3 text-sm"
+                className="input-field !pl-11 !pr-12 !py-3 text-sm w-full"
               />
               {searchQuery && (
                 <button type="button" onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 flex items-center pr-4 text-muted hover:text-foreground">
@@ -340,11 +343,11 @@ const CrmCompanies = () => {
                 </button>
               )}
             </div>
-            <div className="flex rounded-xl border border-primary-500/25 p-1">
+            <div className="flex rounded-xl border border-primary-500/25 p-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => handleViewModeChange('list')}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-primary-600/90 text-white' : 'text-muted hover:text-foreground'}`}
+                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-primary-600/90 text-white' : 'text-muted hover:text-foreground'}`}
               >
                 <TableCellsIcon className="h-4 w-4" />
                 Liste
@@ -352,7 +355,7 @@ const CrmCompanies = () => {
               <button
                 type="button"
                 onClick={() => handleViewModeChange('kanban')}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${viewMode === 'kanban' ? 'bg-primary-600/90 text-white' : 'text-muted hover:text-foreground'}`}
+                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${viewMode === 'kanban' ? 'bg-primary-600/90 text-white' : 'text-muted hover:text-foreground'}`}
               >
                 <ViewColumnsIcon className="h-4 w-4" />
                 Kanban
@@ -367,21 +370,21 @@ const CrmCompanies = () => {
             onChange={setStatus}
           />
 
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
+            <div className="w-full sm:w-auto">
               <label className="mb-1 block text-xs font-medium text-muted">Status</label>
-              <StatusSelect allowEmpty value={status} onChange={setStatus} size="sm" className="!py-2" />
+              <StatusSelect allowEmpty value={status} onChange={setStatus} size="sm" className="!py-2 w-full" />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="mb-1 block text-xs font-medium text-muted">Country</label>
-              <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. France" className="input-field !py-2 text-sm" />
+              <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. France" className="input-field !py-2 text-sm w-full sm:w-auto" />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="mb-1 block text-xs font-medium text-muted">Company Type</label>
-              <input type="text" value={companyType} onChange={(e) => setCompanyType(e.target.value)} placeholder="e.g. startup" className="input-field !py-2 text-sm" />
+              <input type="text" value={companyType} onChange={(e) => setCompanyType(e.target.value)} placeholder="e.g. startup" className="input-field !py-2 text-sm w-full sm:w-auto" />
             </div>
             {hasActiveFilters && (
-              <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-xl border border-primary-500/25 bg-primary-500/10 px-4 py-2 text-sm font-semibold text-foreground hover:bg-primary-500/20">
+              <button type="button" onClick={clearFilters} className="inline-flex items-center justify-center gap-1 rounded-xl border border-primary-500/25 bg-primary-500/10 px-4 py-2 text-sm font-semibold text-foreground hover:bg-primary-500/20 w-full sm:w-auto">
                 <XMarkIcon className="h-4 w-4" />
                 Clear filters
               </button>
@@ -415,7 +418,7 @@ const CrmCompanies = () => {
             </div>
             <div className="glass-card overflow-hidden rounded-2xl border border-primary-500/10">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-primary-500/10 text-xs font-semibold uppercase tracking-wide text-muted">
                       <th className="px-4 py-3"><SortHeader label="Name" column="company_name" sort={sort} order={order} onSort={handleSort} /></th>
@@ -432,7 +435,7 @@ const CrmCompanies = () => {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3 font-medium text-foreground">
                             <CompanyAvatar name={company.company_name} />
-                            {company.company_name || 'Untitled'}
+                            <span className="truncate max-w-[160px] sm:max-w-none">{company.company_name || 'Untitled'}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted">{company.domain || 'N/A'}</td>
@@ -481,7 +484,7 @@ const CrmCompanies = () => {
             {total > perPage && (
               <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <div className="text-sm text-muted">Page {currentPage} of {totalPages}</div>
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-wrap items-center justify-center gap-1">
                   <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="inline-flex items-center gap-1 rounded-xl border border-primary-500/25 px-3 py-2 text-sm font-semibold disabled:opacity-50">
                     <ChevronLeftIcon className="h-4 w-4" /> Prev
                   </button>

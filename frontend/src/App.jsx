@@ -20,8 +20,7 @@ import NotificationBell from './components/NotificationBell';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
-  // Show loading state while checking authentication
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -29,13 +28,13 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
 const AdminRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -43,11 +42,11 @@ const AdminRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   if (!user?.is_admin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -58,34 +57,46 @@ const AdminRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   return children;
 };
 
 const LayoutWrapper = ({ children }) => {
   const { isCollapsed } = useSidebar();
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  const checkIsDesktop = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const isLandscapeSmartphone = window.matchMedia('(orientation: landscape)').matches && height <= 500;
+    return width >= 1024 && !isLandscapeSmartphone;
+  };
+
+  const [isDesktop, setIsDesktop] = useState(checkIsDesktop);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 768);
+      setIsDesktop(checkIsDesktop());
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   return (
     <div className="flex min-h-screen h-screen">
       <Navbar />
-      <main 
+      <main
         className="flex-1 transition-all duration-300 min-h-screen h-full overflow-auto"
         style={{
           marginLeft: isDesktop ? (isCollapsed ? '80px' : '256px') : '0'
         }}
       >
-        {/* Notification Bell - Fixed top right */}
-        <div className="fixed top-4 right-4 z-50">
+        {/* Notification Bell */}
+        <div className="fixed top-20 right-4 z-50 lg:top-4">
           <NotificationBell />
         </div>
         {children}

@@ -1,16 +1,75 @@
-import React, { useMemo, useState } from 'react';
-import { PencilIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { PencilIcon, TrashIcon, UserPlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import AssignModal from './AssignModal';
 import UserAvatar from './UserAvatar';
 import SubtaskForm from './SubtaskForm';
 import { useTheme } from '../contexts/ThemeContext';
+
+const CustomSelect = ({ value, options, onChange, resolveStyle, theme }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={resolveStyle(value)}
+        className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40 max-w-full inline-flex items-center gap-1"
+      >
+        <span>{selected?.label}</span>
+        <ChevronDownIcon className={`h-3 w-3 shrink-0 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 z-[60] min-w-[120px] rounded-lg border divider-soft shadow-xl overflow-hidden py-1"
+          style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff' }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              style={resolveStyle(opt.value)}
+              className={`w-full text-left px-3 py-2 text-xs font-bold transition hover:opacity-90 ${opt.value === value ? 'ring-1 ring-inset ring-primary-500/40' : ''
+                }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
   const { theme } = useTheme();
   const [showEditForm, setShowEditForm] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
 
-  // ✅ Status styles with theme support
   const statusOptionStyles = useMemo(
     () => ({
       todo: {
@@ -33,7 +92,6 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
     []
   );
 
-  // ✅ Priority styles with theme support
   const priorityOptionStyles = useMemo(
     () => ({
       low: {
@@ -56,7 +114,6 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
     []
   );
 
-  // Helpers
   const resolveStatusOptionStyle = (value) => {
     const palette = statusOptionStyles[value] || statusOptionStyles.default;
     return theme === 'dark' ? palette.dark : palette.light;
@@ -75,40 +132,42 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
     onUpdate(subtask.id, { priority: newPriority });
   };
 
+  const priorityOptions = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ];
+
+  const statusOptions = [
+    { value: 'todo', label: 'To Do' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
   return (
-    <div className="rounded-2xl border divider-soft bg-surface p-4">
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex-1">
-          <h4 className="mb-1 font-medium text-foreground">{subtask.title}</h4>
+    <div className="rounded-2xl border divider-soft bg-surface p-3 sm:p-4">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="mb-1 font-medium text-foreground text-sm sm:text-base break-words">{subtask.title}</h4>
           {subtask.description && (
-            <p className="mb-2 text-sm text-muted">{subtask.description}</p>
+            <p className="mb-2 text-sm text-muted break-words">{subtask.description}</p>
           )}
 
-          {/* ✅ STATUS + PRIORITY with correct dark mode styling */}
-          <div className="mb-2 flex items-center space-x-3">
-            {/* STATUS */}
-            <select
+          <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
+            <CustomSelect
               value={subtask.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              style={resolveStatusOptionStyle(subtask.status)}
-              className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-            >
-              <option value="todo" style={resolveStatusOptionStyle('todo')}>To Do</option>
-              <option value="in_progress" style={resolveStatusOptionStyle('in_progress')}>In Progress</option>
-              <option value="completed" style={resolveStatusOptionStyle('completed')}>Completed</option>
-            </select>
-
-            {/* PRIORITY */}
-            <select
+              options={statusOptions}
+              onChange={handleStatusChange}
+              resolveStyle={resolveStatusOptionStyle}
+              theme={theme}
+            />
+            <CustomSelect
               value={subtask.priority}
-              onChange={(e) => handlePriorityChange(e.target.value)}
-              style={resolvePriorityOptionStyle(subtask.priority)}
-              className="px-3 py-1 rounded-full text-xs font-bold border border-transparent shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-            >
-              <option value="low" style={resolvePriorityOptionStyle('low')}>Low</option>
-              <option value="medium" style={resolvePriorityOptionStyle('medium')}>Medium</option>
-              <option value="high" style={resolvePriorityOptionStyle('high')}>High</option>
-            </select>
+              options={priorityOptions}
+              onChange={handlePriorityChange}
+              resolveStyle={resolvePriorityOptionStyle}
+              theme={theme}
+            />
           </div>
 
           {subtask.due_date && (
@@ -133,26 +192,24 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
           )}
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center shrink-0">
           <button
             onClick={() => setShowAssignModal(true)}
-            className="rounded-lg p-1.5 text-muted transition hover:text-foreground"
+            className="rounded-lg p-2 text-muted transition hover:text-foreground"
             title="Assign subtask"
           >
             <UserPlusIcon className="h-4 w-4" />
           </button>
-
           <button
             onClick={() => setShowEditForm(true)}
-            className="rounded-lg p-1.5 text-muted transition hover:text-foreground"
+            className="rounded-lg p-2 text-muted transition hover:text-foreground"
             title="Edit subtask"
           >
             <PencilIcon className="h-4 w-4" />
           </button>
-
           <button
             onClick={() => onDelete(subtask.id)}
-            className="rounded-lg p-1.5 text-muted transition hover:text-rose-500"
+            className="rounded-lg p-2 text-muted transition hover:text-rose-500"
             title="Delete subtask"
           >
             <TrashIcon className="h-4 w-4" />
@@ -160,7 +217,6 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
         </div>
       </div>
 
-      {/* Edit Form */}
       {showEditForm && (
         <SubtaskForm
           subtask={subtask}
@@ -172,7 +228,6 @@ const SubtaskCard = ({ subtask, users, onUpdate, onDelete, onAssign }) => {
         />
       )}
 
-      {/* Assign Modal */}
       {showAssignModal && (
         <AssignModal
           title="Assign Subtask"

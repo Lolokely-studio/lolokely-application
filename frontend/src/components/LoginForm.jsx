@@ -26,7 +26,7 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     try {
       await login(formData);
       navigate('/dashboard');
@@ -36,20 +36,20 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="auth-page min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="auth-page min-h-[100dvh] w-full flex items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="relative z-10 w-full max-w-md">
-        <div className="glass-panel space-y-8 px-6 py-10 sm:px-10">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-40 w-40 items-center justify-center rounded-2xl overflow-hidden">
-              <img 
-                src={logoImage} 
-                alt="Lolokely Logo" 
+        <div className="glass-panel space-y-6 sm:space-y-8 px-4 py-6 sm:px-10 sm:py-10">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+            <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-2xl overflow-hidden shrink-0">
+              <img
+                src={logoImage}
+                alt="Lolokely Logo"
                 className="h-full w-full object-contain"
               />
             </div>
             <div>
-              <h2 className="text-3xl font-semibold text-foreground">Sign in to Lolokely</h2>
-              <p className="mt-2 text-sm text-muted">
+              <h2 className="text-2xl sm:text-3xl font-semibold text-foreground">Sign in to Lolokely</h2>
+              <p className="mt-1.5 sm:mt-2 text-sm text-muted">
                 New here?{' '}
                 <a href="/register" className="font-semibold text-primary-600 hover:text-primary-500">
                   Create an account
@@ -58,15 +58,15 @@ const LoginForm = () => {
             </div>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="alert-error">
+              <div className="alert-error text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-5">
-              <div className="space-y-2">
+            <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-muted">
                   Email address
                 </label>
@@ -83,7 +83,7 @@ const LoginForm = () => {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label htmlFor="password" className="text-sm font-medium text-muted">
                   Password
                 </label>
@@ -102,7 +102,7 @@ const LoginForm = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors p-1"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (

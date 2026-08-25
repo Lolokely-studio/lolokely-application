@@ -95,7 +95,6 @@ const Dashboard = () => {
   const handleCreateSubtask = async (taskId, subtaskData) => {
     try {
       await taskService.createSubtask(taskId, subtaskData);
-      // Reload tasks to get updated subtasks
       loadData();
     } catch (error) {
       console.error('Error creating subtask:', error);
@@ -105,7 +104,6 @@ const Dashboard = () => {
   const handleUpdateSubtask = async (subtaskId, subtaskData) => {
     try {
       await taskService.updateSubtask(subtaskId, subtaskData);
-      // Reload tasks to get updated subtasks
       loadData();
     } catch (error) {
       console.error('Error updating subtask:', error);
@@ -115,7 +113,6 @@ const Dashboard = () => {
   const handleDeleteSubtask = async (subtaskId) => {
     try {
       await taskService.deleteSubtask(subtaskId);
-      // Reload tasks to get updated subtasks
       loadData();
     } catch (error) {
       console.error('Error deleting subtask:', error);
@@ -125,7 +122,6 @@ const Dashboard = () => {
   const handleAssignTask = async (taskId, userIds) => {
     try {
       await taskService.assignTask(taskId, userIds);
-      // Reload tasks to get updated assignments
       loadData();
     } catch (error) {
       console.error('Error assigning task:', error);
@@ -135,18 +131,15 @@ const Dashboard = () => {
   const handleAssignSubtask = async (subtaskId, userIds) => {
     try {
       await taskService.assignSubtask(subtaskId, userIds);
-      // Reload tasks to get updated assignments
       loadData();
     } catch (error) {
       console.error('Error assigning subtask:', error);
     }
   };
 
-  // Filter tasks and subtasks based on search query, user, priority, and status filters
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
 
-    // Filter by user assignment
     if (selectedUserId) {
       filtered = filtered.filter(task => {
         const assignedUserIds = task.assignments?.map(a => a.user_id || a.id) || [];
@@ -154,17 +147,14 @@ const Dashboard = () => {
       });
     }
 
-    // Filter by priority
     if (selectedPriority) {
       filtered = filtered.filter(task => task.priority === selectedPriority);
     }
 
-    // Filter by status
     if (selectedStatus) {
       filtered = filtered.filter(task => task.status === selectedStatus);
     }
 
-    // Filter by date range (tasks whose timeline overlaps the range)
     if (dateRangeStart && dateRangeEnd) {
       const rangeStart = new Date(dateRangeStart);
       rangeStart.setHours(0, 0, 0, 0);
@@ -190,32 +180,27 @@ const Dashboard = () => {
       });
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      
+
       filtered = filtered
         .map(task => {
-          // Check if task matches
-          const taskMatches = 
+          const taskMatches =
             task.title?.toLowerCase().includes(query) ||
             task.description?.toLowerCase().includes(query);
-          
-          // Filter subtasks that match
+
           const matchingSubtasks = task.subtasks?.filter(subtask =>
             subtask.title?.toLowerCase().includes(query) ||
             subtask.description?.toLowerCase().includes(query)
           ) || [];
-          
-          // Include task if it matches or has matching subtasks
+
           if (taskMatches || matchingSubtasks.length > 0) {
             return {
               ...task,
-              // If task doesn't match but has matching subtasks, only show those subtasks
               subtasks: taskMatches ? task.subtasks : matchingSubtasks
             };
           }
-          
+
           return null;
         })
         .filter(task => task !== null);
@@ -228,14 +213,14 @@ const Dashboard = () => {
     const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
 
     const subtaskBarColors = [
-      'rgb(59 130 246)',   // blue
-      'rgb(168 85 247)',   // violet
-      'rgb(236 72 153)',   // pink
-      'rgb(234 88 12)',    // orange
-      'rgb(34 197 94)',   // emerald
-      'rgb(20 184 166)',  // teal
-      'rgb(251 146 60)',   // amber
-      'rgb(139 92 246)',   // purple
+      'rgb(59 130 246)',
+      'rgb(168 85 247)',
+      'rgb(236 72 153)',
+      'rgb(234 88 12)',
+      'rgb(34 197 94)',
+      'rgb(20 184 166)',
+      'rgb(251 146 60)',
+      'rgb(139 92 246)',
     ];
 
     const { rangeStart, rangeEnd, days, dayWidthPct } = useMemo(() => {
@@ -311,7 +296,7 @@ const Dashboard = () => {
       return (
         <div className="flex-1 flex items-center justify-center py-8 rounded-xl border divider-soft bg-surface">
           <div className="text-center px-4">
-            <h3 className="text-base sm:text-lg font-semibold text-foreground">
+            <h3 className="text-base lg:text-lg font-semibold text-foreground">
               No tasks in this range
             </h3>
             <p className="text-sm text-muted mt-1">
@@ -324,20 +309,19 @@ const Dashboard = () => {
 
     return (
       <div className="flex-1 min-h-0 flex flex-col rounded-xl border divider-soft bg-surface/60 overflow-hidden">
-        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft flex items-center justify-between shrink-0">
-          <span className="text-xs sm:text-sm font-semibold text-foreground">
+        <div className="px-3 lg:px-4 py-2.5 lg:py-3 border-b divider-soft flex items-center justify-between shrink-0">
+          <span className="text-xs lg:text-sm font-semibold text-foreground">
             Gantt View
           </span>
-          <span className="text-[10px] sm:text-xs text-muted">
+          <span className="text-[10px] lg:text-xs text-muted">
             {rangeStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
             {rangeEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </span>
         </div>
 
         <div className="flex-1 min-h-0 overflow-auto">
-          <div className="min-w-[640px] px-3 sm:px-4 py-3 space-y-1">
-            {/* Date scale */}
-            <div className="pl-36 sm:pl-44">
+          <div className="min-w-[640px] px-3 lg:px-4 py-3 space-y-1">
+            <div className="pl-36 lg:pl-44">
               <div className="relative h-8 border-b border-border/60">
                 {days.map((date) => {
                   const isToday = new Date().toDateString() === date.toDateString();
@@ -350,7 +334,7 @@ const Dashboard = () => {
                       style={{ left: `${left}%`, width: `${dayWidthPct}%` }}
                     >
                       <div className="h-full flex flex-col items-center justify-end pb-0.5">
-                        <span className="text-[9px] sm:text-[10px] text-muted">
+                        <span className="text-[9px] lg:text-[10px] text-muted">
                           {date.getDate()}
                         </span>
                         {isToday && (
@@ -363,7 +347,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Task and subtask rows */}
             <div className="space-y-1">
               {ganttTasks.map((task) => {
                 const { start: taskStart, end: taskEnd } = getStartEnd(task);
@@ -379,9 +362,8 @@ const Dashboard = () => {
 
                 return (
                   <div key={task.id} className="space-y-1">
-                    {/* Task row */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-36 sm:w-44 flex items-center gap-1 min-w-0">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                      <div className="w-36 lg:w-44 flex items-center gap-1 min-w-0">
                         {hasSubtasks ? (
                           <button
                             type="button"
@@ -399,7 +381,7 @@ const Dashboard = () => {
                           <span className="w-5 shrink-0" />
                         )}
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs sm:text-sm font-medium text-foreground truncate">
+                          <span className="text-xs lg:text-sm font-medium text-foreground truncate">
                             {task.title}
                           </span>
                           <span className="text-[10px] text-muted">
@@ -419,9 +401,8 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    {/* Subtask rows (dropdown) */}
                     {hasSubtasks && isExpanded && (
-                      <div className="space-y-1 pl-6 sm:pl-8">
+                      <div className="space-y-1 pl-6 lg:pl-8">
                         {subtasksInRange.length === 0 ? (
                           <p className="text-[10px] text-muted py-1">No subtasks in this range</p>
                         ) : (
@@ -432,9 +413,9 @@ const Dashboard = () => {
                             return (
                               <div
                                 key={subtask.id}
-                                className="flex items-center gap-2 sm:gap-3"
+                                className="flex items-center gap-2 lg:gap-3"
                               >
-                                <div className="w-32 sm:w-40 flex flex-col min-w-0 pl-5">
+                                <div className="w-32 lg:w-40 flex flex-col min-w-0 pl-5">
                                   <span className="text-xs font-medium text-foreground/90 truncate">
                                     {subtask.title}
                                   </span>
@@ -472,9 +453,9 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="relative z-10 flex flex-col h-full min-h-screen w-full overflow-hidden">
-        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-4 sm:py-5 lg:px-6">
-          <header className="flex-shrink-0 mb-3 sm:mb-4 space-y-3">
+      <div className="relative z-10 flex flex-col min-h-screen w-full">
+        <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-3 py-4 lg:px-6 lg:py-5">
+          <header className="flex-shrink-0 mb-3 lg:mb-4 space-y-3">
             <Skeleton className="h-8 w-64 max-w-full" />
             <Skeleton className="h-4 w-80 max-w-full" />
             <div className="flex flex-wrap gap-2">
@@ -483,26 +464,19 @@ const Dashboard = () => {
               <Skeleton className="h-10 w-28 rounded-xl" />
             </div>
           </header>
-          <div
-            role="status"
-            className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden"
-          >
-            <span className="sr-only">Loading…</span>
-            <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-4">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
               {['To Do', 'In Progress', 'Completed'].map((label) => (
                 <div
                   key={label}
-                  className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-[240px]"
+                  className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-[200px]"
                 >
-                  <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft">
+                  <div className="px-3 lg:px-4 py-2.5 lg:py-3 border-b divider-soft">
                     <Skeleton className="h-4 w-24" />
                   </div>
-                  <div className="flex-1 p-2 sm:p-3 space-y-2 sm:space-y-3">
-                    {Array.from({ length: 3 }, (_, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl border divider-soft bg-card p-3 space-y-2"
-                      >
+                  <div className="flex-1 p-2 lg:p-3 space-y-2 lg:space-y-3">
+                    {Array.from({ length: 2 }, (_, i) => (
+                      <div key={i} className="rounded-xl border divider-soft bg-card p-3 space-y-2">
                         <Skeleton className="h-4 w-3/4" />
                         <SkeletonText lines={2} />
                       </div>
@@ -511,9 +485,9 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-            <aside className="flex-shrink-0 w-full lg:w-72 xl:w-80 space-y-3 rounded-xl border divider-soft bg-surface/50 p-4">
+            <aside className="w-full lg:w-72 xl:w-80 space-y-3 rounded-xl border divider-soft bg-surface/50 p-4">
               <Skeleton className="h-5 w-32" />
-              {Array.from({ length: 5 }, (_, i) => (
+              {Array.from({ length: 4 }, (_, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <Skeleton className="h-8 w-8 rounded-full shrink-0" />
                   <Skeleton className="h-3 flex-1" />
@@ -527,51 +501,52 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="relative z-10 flex flex-col h-full min-h-screen w-full overflow-hidden">
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-4 sm:py-5 lg:px-6">
-        {/* Compact header: welcome + filters — always visible, no scroll */}
-        <header className="flex-shrink-0 mb-3 sm:mb-4">
-          <div className="flex flex-col gap-3 sm:gap-4">
+    <div className="flex flex-col min-h-screen w-full">
+      <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-3 py-4 lg:px-6 lg:py-5">
+        <header className="flex-shrink-0 mb-3 lg:mb-4">
+          <div className="flex flex-col gap-3 lg:gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground truncate">
+              <h1 className="text-xl lg:text-2xl xl:text-3xl font-semibold text-foreground truncate">
                 Welcome back, {user?.first_name}!
               </h1>
-              <p className="text-xs sm:text-sm text-muted mt-0.5">
+              <p className="text-xs lg:text-sm text-muted mt-0.5">
                 Manage your team&apos;s tasks and stay organized.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="relative flex-1 min-w-0 max-w-full sm:max-w-xs">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4">
-                  <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500/70" />
+            {/* Filtres : stackés jusqu'à lg, puis en ligne */}
+            <div className="flex flex-col lg:flex-row gap-2 lg:gap-3 flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0 max-w-full lg:max-w-xs">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 lg:pl-4">
+                  <MagnifyingGlassIcon className="h-4 w-4 lg:h-5 lg:w-5 text-primary-500/70" />
                 </div>
                 <input
                   type="text"
                   placeholder="Search tasks or subtasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-field !pl-9 !pr-10 sm:!pl-11 sm:!pr-12 !py-2.5 sm:!py-3 text-sm w-full"
+                  className="input-field !pl-9 !pr-10 lg:!pl-11 lg:!pr-12 !py-2.5 lg:!py-3 text-sm w-full"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-muted transition hover:text-foreground"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 lg:pr-4 text-muted transition hover:text-foreground"
                   >
-                    <XMarkIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <XMarkIcon className="h-4 w-4 lg:h-5 lg:w-5" />
                   </button>
                 )}
               </div>
+
               <div className="flex flex-wrap gap-2 items-stretch">
-                <div className="relative flex-shrink-0 min-w-0">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 sm:pl-3">
-                    <FunnelIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500/70" />
+                <div className="relative flex-shrink-0 min-w-0 w-full lg:w-auto">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 lg:pl-3">
+                    <FunnelIcon className="h-4 w-4 lg:h-5 lg:w-5 text-primary-500/70" />
                   </div>
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="input-field w-full min-w-[120px] sm:w-36 lg:w-40 appearance-none !pl-9 !pr-9 sm:!pl-11 sm:!pr-10 text-xs sm:text-sm cursor-pointer !py-2.5"
+                    className="input-field w-full min-w-0 lg:min-w-[120px] lg:w-36 xl:w-40 appearance-none !pl-9 !pr-9 lg:!pl-11 lg:!pr-10 text-xs lg:text-sm cursor-pointer !py-2.5"
                   >
                     <option value="">All users</option>
                     {users.map((u) => (
@@ -580,62 +555,64 @@ const Dashboard = () => {
                       </option>
                     ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 text-muted">
-                    <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 lg:pr-3 text-muted">
+                    <svg className="h-3.5 w-3.5 lg:h-4 lg:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
                 </div>
+
                 <select
                   value={selectedPriority}
                   onChange={(e) => setSelectedPriority(e.target.value)}
-                  className="input-field w-28 sm:w-32 appearance-none !pr-9 text-xs sm:text-sm cursor-pointer !py-2.5"
+                  className="input-field w-full lg:w-32 appearance-none !pr-9 text-xs lg:text-sm cursor-pointer !py-2.5"
                 >
                   <option value="">Priority</option>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                 </select>
+
                 <input
                   type="date"
                   value={dateRangeStart}
                   onChange={(e) => setDateRangeStart(e.target.value)}
-                  placeholder="From"
-                  className="input-field w-28 sm:w-32 appearance-none text-xs sm:text-sm cursor-pointer !py-2.5"
+                  className="input-field w-full lg:w-32 appearance-none text-xs lg:text-sm cursor-pointer !py-2.5"
                   title="From date"
                 />
                 <input
                   type="date"
                   value={dateRangeEnd}
                   onChange={(e) => setDateRangeEnd(e.target.value)}
-                  placeholder="To"
-                  className="input-field w-28 sm:w-32 appearance-none text-xs sm:text-sm cursor-pointer !py-2.5"
+                  className="input-field w-full lg:w-32 appearance-none text-xs lg:text-sm cursor-pointer !py-2.5"
                   title="To date"
                 />
+
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="input-field w-32 sm:w-36 lg:w-40 appearance-none !pr-9 text-xs sm:text-sm cursor-pointer !py-2.5"
+                  className="input-field w-full lg:w-36 xl:w-40 appearance-none !pr-9 text-xs lg:text-sm cursor-pointer !py-2.5"
                 >
                   <option value="">Status</option>
                   <option value="todo">To do</option>
                   <option value="in_progress">In progress</option>
                   <option value="completed">Completed</option>
                 </select>
+
                 <button
                   type="button"
                   onClick={() => setShowGanttView((prev) => !prev)}
-                  className={`inline-flex items-center justify-center rounded-xl border px-3 sm:px-4 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                    showGanttView
-                      ? 'bg-primary-600/90 text-white border-primary-500 shadow-sm'
-                      : 'bg-surface text-muted hover:text-foreground border-border hover:bg-surface/80'
-                  }`}
+                  className={`inline-flex items-center justify-center rounded-xl border px-3 lg:px-4 text-xs lg:text-sm font-medium transition whitespace-nowrap w-full lg:w-auto ${showGanttView
+                    ? 'bg-primary-600/90 text-white border-primary-500 shadow-sm'
+                    : 'bg-surface text-muted hover:text-foreground border-border hover:bg-surface/80'
+                    }`}
                 >
                   {showGanttView ? 'Board View' : 'Gantt View'}
                 </button>
+
                 <button
                   onClick={() => setShowTaskForm(true)}
-                  className="btn-primary whitespace-nowrap shrink-0 !py-2.5"
+                  className="btn-primary whitespace-nowrap shrink-0 !py-2.5 w-full lg:w-auto"
                 >
                   Create New Task
                 </button>
@@ -693,56 +670,60 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Main content: board / gantt + sidebar — fills remaining height, scrolls inside columns */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 overflow-hidden">
-          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+        {/* Contenu : stacké jusqu'à lg, puis side-by-side */}
+        <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
+          <div className="flex flex-col gap-3 lg:flex-1 lg:min-h-0 lg:overflow-hidden min-w-0">
             {!showGanttView && (searchQuery || selectedUserId || selectedPriority || selectedStatus || dateRangeStart || dateRangeEnd) && filteredTasks.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center py-8 rounded-xl border divider-soft bg-surface">
+              <div className="flex items-center justify-center py-12 rounded-xl border divider-soft bg-surface">
                 <div className="text-center px-4">
-                  <div className="mb-3 text-4xl sm:text-5xl text-primary-500/60">🔍</div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground">No tasks found</h3>
+                  <div className="mb-3 text-4xl lg:text-5xl text-primary-500/60">🔍</div>
+                  <h3 className="text-base lg:text-lg font-semibold text-foreground">No tasks found</h3>
                   <p className="text-sm text-muted mt-1">Try adjusting your filters.</p>
                 </div>
               </div>
             ) : !showGanttView && filteredTasks.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center py-8 rounded-xl border divider-soft bg-surface">
+              <div className="flex items-center justify-center py-12 rounded-xl border divider-soft bg-surface">
                 <div className="text-center px-4">
-                  <div className="mb-3 text-4xl sm:text-5xl text-primary-500/60">📋</div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground">No tasks yet</h3>
+                  <div className="mb-3 text-4xl lg:text-5xl text-primary-500/60">📋</div>
+                  <h3 className="text-base lg:text-lg font-semibold text-foreground">No tasks yet</h3>
                   <p className="text-sm text-muted mt-1">Create your first task to get started.</p>
                 </div>
               </div>
             ) : showGanttView ? (
-              <GanttView
-                tasks={filteredTasks}
-                dateRangeStart={dateRangeStart}
-                dateRangeEnd={dateRangeEnd}
-              />
+              <div className="lg:flex-1 lg:min-h-0 lg:overflow-hidden flex flex-col min-h-[400px]">
+                <GanttView
+                  tasks={filteredTasks}
+                  dateRangeStart={dateRangeStart}
+                  dateRangeEnd={dateRangeEnd}
+                />
+              </div>
             ) : (
               <>
                 {(searchQuery || selectedUserId || selectedPriority || selectedStatus) && (
-                  <p className="text-xs sm:text-sm text-muted px-0.5 mb-1 shrink-0">
+                  <p className="text-xs lg:text-sm text-muted px-0.5 shrink-0">
                     Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
                   </p>
                 )}
-                <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
+
+                {/* 1 colonne jusqu'à lg, 3 colonnes à partir de lg */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
                   {['todo', 'in_progress', 'completed'].map((status) => {
                     const columnTasks = filteredTasks.filter((t) => t.status === status);
                     const columnLabels = { todo: 'To Do', in_progress: 'In Progress', completed: 'Completed' };
                     return (
                       <div
                         key={status}
-                        className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-0 min-w-0"
+                        className="flex flex-col rounded-xl border divider-soft bg-surface/50 overflow-hidden min-h-[220px] lg:min-h-0 lg:h-full"
                       >
-                        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b divider-soft flex items-center justify-between shrink-0">
-                          <span className="font-semibold text-foreground text-xs sm:text-sm truncate">
+                        <div className="px-3 lg:px-4 py-2.5 lg:py-3 border-b divider-soft flex items-center justify-between shrink-0">
+                          <span className="font-semibold text-foreground text-xs lg:text-sm truncate">
                             {columnLabels[status]}
                           </span>
-                          <span className="text-[10px] sm:text-xs font-medium text-muted bg-muted/50 px-2 py-0.5 rounded-full shrink-0">
+                          <span className="text-[10px] lg:text-xs font-medium text-muted bg-muted/50 px-2 py-0.5 rounded-full shrink-0">
                             {columnTasks.length}
                           </span>
                         </div>
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-3 space-y-2 sm:space-y-3">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 lg:p-3 space-y-2 lg:space-y-3">
                           {columnTasks.map((task) => (
                             <TaskCard
                               key={task.id}
@@ -766,7 +747,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          <aside className="flex-shrink-0 w-full lg:w-72 xl:w-80 flex flex-col min-h-0 lg:min-h-[320px]">
+          <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 lg:min-h-0 lg:overflow-hidden">
             <UserList users={users} />
           </aside>
         </div>

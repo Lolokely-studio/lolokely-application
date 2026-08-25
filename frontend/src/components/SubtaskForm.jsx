@@ -19,7 +19,6 @@ const SubtaskForm = ({ subtask, onSubmit, onCancel }) => {
   };
 
   useEffect(() => {
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = 'unset';
@@ -43,118 +42,124 @@ const SubtaskForm = ({ subtask, onSubmit, onCancel }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div
-        className="glass-panel mx-4 w-full max-w-md px-6 py-6 sm:px-8"
+        className="glass-panel w-full max-w-md max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">
+        {/* Entête fixe */}
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">
             {subtask ? 'Edit Subtask' : 'Create New Subtask'}
           </h2>
           <button
             onClick={onCancel}
-            className="text-muted transition hover:text-foreground"
+            className="text-muted transition hover:text-foreground p-1 rounded-lg"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="title" className="mb-1 block text-sm font-medium text-muted">
-              Title *
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              className="input-field"
-              placeholder="Enter subtask title"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="description" className="mb-1 block text-sm font-medium text-muted">
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
-              className="input-field"
-              placeholder="Enter subtask description"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        {/* Formulaire complet avec zone centrale scrollable */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 pt-3">
+          {/* Corps défilable */}
+          <div className="space-y-3 sm:space-y-4 overflow-y-auto pr-1 flex-1">
             <div>
-              <label htmlFor="status" className="mb-1 block text-sm font-medium text-muted">
-                Status
+              <label htmlFor="title" className="mb-1 block text-xs sm:text-sm font-medium text-muted">
+                Title *
               </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={formData.title}
                 onChange={handleChange}
+                required
                 className="input-field"
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+                placeholder="Enter subtask title"
+              />
             </div>
 
             <div>
-              <label htmlFor="priority" className="mb-1 block text-sm font-medium text-muted">
-                Priority
+              <label htmlFor="description" className="mb-1 block text-xs sm:text-sm font-medium text-muted">
+                Description
               </label>
-              <select
-                id="priority"
-                name="priority"
-                value={formData.priority}
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={2}
+                className="input-field"
+                placeholder="Enter subtask description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label htmlFor="status" className="mb-1 block text-xs sm:text-sm font-medium text-muted">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="priority" className="mb-1 block text-xs sm:text-sm font-medium text-muted">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="due_date" className="mb-1 block text-xs sm:text-sm font-medium text-muted">
+                Due Date
+              </label>
+              <input
+                type="date"
+                id="due_date"
+                name="due_date"
+                value={formData.due_date}
                 onChange={handleChange}
                 className="input-field"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              />
             </div>
           </div>
 
-          <div>
-            <label htmlFor="due_date" className="mb-1 block text-sm font-medium text-muted">
-              Due Date
-            </label>
-            <input
-              type="date"
-              id="due_date"
-              name="due_date"
-              value={formData.due_date}
-              onChange={handleChange}
-              className="input-field"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Pied de page fixe */}
+          <div className="flex justify-end gap-2 sm:gap-3 pt-3 border-t border-white/10 shrink-0 mt-3">
             <button
               type="button"
               onClick={onCancel}
-              className="btn-secondary"
+              className="btn-secondary text-xs sm:text-sm py-1.5 sm:py-2"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className="btn-primary text-xs sm:text-sm py-1.5 sm:py-2"
             >
               {subtask ? 'Update Subtask' : 'Create Subtask'}
             </button>
