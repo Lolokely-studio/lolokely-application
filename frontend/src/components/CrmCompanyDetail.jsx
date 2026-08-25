@@ -38,18 +38,18 @@ const ModalShell = ({ title, onCancel, error, children }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-3 sm:p-4"
       onClick={handleBackdropClick}
     >
       <div
-        className="glass-panel mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto px-6 py-6 sm:px-8"
+        className="glass-panel mx-0 sm:mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground break-words">{title}</h2>
           <button
             onClick={onCancel}
-            className="text-muted transition hover:text-foreground"
+            className="text-muted transition hover:text-foreground shrink-0"
             aria-label="Close modal"
           >
             <XMarkIcon className="h-6 w-6" />
@@ -72,6 +72,17 @@ const Field = ({ label, children }) => (
   <div>
     <label className="mb-1 block text-sm font-medium text-muted">{label}</label>
     {children}
+  </div>
+);
+
+const FormActions = ({ onCancel, submitLabel }) => (
+  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
+    <button type="button" onClick={onCancel} className="btn-secondary w-full sm:w-auto">
+      Cancel
+    </button>
+    <button type="submit" className="btn-primary w-full sm:w-auto">
+      {submitLabel}
+    </button>
   </div>
 );
 
@@ -116,87 +127,37 @@ const CompanyEditForm = ({ company, onSubmit, onCancel, error }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Company Name *">
-            <input
-              type="text"
-              name="company_name"
-              value={formData.company_name}
-              onChange={handleChange}
-              required
-              className="input-field"
-            />
+            <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} required className="input-field w-full" />
           </Field>
           <Field label="Domain *">
-            <input
-              type="text"
-              name="domain"
-              value={formData.domain}
-              onChange={handleChange}
-              required
-              className="input-field"
-            />
+            <input type="text" name="domain" value={formData.domain} onChange={handleChange} required className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Country">
-            <input
-              type="text"
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="text" name="country" value={formData.country} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="City">
-            <input
-              type="text"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="text" name="city" value={formData.city} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Region">
-            <input
-              type="text"
-              name="region"
-              value={formData.region}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="text" name="region" value={formData.region} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Website">
-            <input
-              type="text"
-              name="website"
-              value={formData.website}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="text" name="website" value={formData.website} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Founded Year">
-            <input
-              type="number"
-              name="founded_year"
-              value={formData.founded_year}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="number" name="founded_year" value={formData.founded_year} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Company Type">
-            <input
-              type="text"
-              name="company_type"
-              value={formData.company_type}
-              onChange={handleChange}
-              className="input-field"
-            />
+            <input type="text" name="company_type" value={formData.company_type} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Status">
             <StatusSelect
@@ -207,23 +168,10 @@ const CompanyEditForm = ({ company, onSubmit, onCancel, error }) => {
         </div>
 
         <Field label="Notes">
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            rows={3}
-            className="input-field"
-          />
+          <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="input-field w-full" />
         </Field>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={onCancel} className="btn-secondary">
-            Cancel
-          </button>
-          <button type="submit" className="btn-primary">
-            Save Changes
-          </button>
-        </div>
+        <FormActions onCancel={onCancel} submitLabel="Save Changes" />
       </form>
     </ModalShell>
   );
@@ -271,10 +219,10 @@ const ProspectForm = ({ prospect, onSubmit, onCancel, error }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Sent By">
-            <input type="text" name="sent_by" value={formData.sent_by} onChange={handleChange} className="input-field" />
+            <input type="text" name="sent_by" value={formData.sent_by} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Status">
-            <select name="status" value={formData.status} onChange={handleChange} className="input-field">
+            <select name="status" value={formData.status} onChange={handleChange} className="input-field w-full">
               <option value="">—</option>
               {PROSPECT_STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -284,39 +232,36 @@ const ProspectForm = ({ prospect, onSubmit, onCancel, error }) => {
         </div>
 
         <Field label="Sent At">
-          <input type="datetime-local" name="sent_at" value={formData.sent_at} onChange={handleChange} className="input-field" />
+          <input type="datetime-local" name="sent_at" value={formData.sent_at} onChange={handleChange} className="input-field w-full" />
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Contract Status">
-            <input type="text" name="contract_status" value={formData.contract_status} onChange={handleChange} className="input-field" />
+            <input type="text" name="contract_status" value={formData.contract_status} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Contract Signed At">
-            <input type="date" name="contract_signed_at" value={formData.contract_signed_at} onChange={handleChange} className="input-field" />
+            <input type="date" name="contract_signed_at" value={formData.contract_signed_at} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Contract Value">
-            <input type="number" step="0.01" name="contract_value" value={formData.contract_value} onChange={handleChange} className="input-field" />
+            <input type="number" step="0.01" name="contract_value" value={formData.contract_value} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Contract Currency">
-            <input type="text" name="contract_currency" value={formData.contract_currency} onChange={handleChange} placeholder="EUR" className="input-field" />
+            <input type="text" name="contract_currency" value={formData.contract_currency} onChange={handleChange} placeholder="EUR" className="input-field w-full" />
           </Field>
         </div>
 
         <Field label="Contract URL">
-          <input type="text" name="contract_url" value={formData.contract_url} onChange={handleChange} className="input-field" />
+          <input type="text" name="contract_url" value={formData.contract_url} onChange={handleChange} className="input-field w-full" />
         </Field>
 
         <Field label="Notes">
-          <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="input-field" />
+          <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="input-field w-full" />
         </Field>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary">{prospect ? 'Save Changes' : 'Add Prospect'}</button>
-        </div>
+        <FormActions onCancel={onCancel} submitLabel={prospect ? 'Save Changes' : 'Add Prospect'} />
       </form>
     </ModalShell>
   );
@@ -351,22 +296,19 @@ const EmailForm = ({ email, onSubmit, onCancel, error }) => {
     <ModalShell title={email ? 'Edit Email' : 'New Email'} onCancel={onCancel} error={error}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Email *">
-          <input type="email" name="email" value={formData.email} onChange={handleChange} required className="input-field" placeholder="contact@acme.com" />
+          <input type="email" name="email" value={formData.email} onChange={handleChange} required className="input-field w-full" placeholder="contact@acme.com" />
         </Field>
         <Field label="Email Type">
-          <input type="text" name="email_type" value={formData.email_type} onChange={handleChange} placeholder="general" className="input-field" />
+          <input type="text" name="email_type" value={formData.email_type} onChange={handleChange} placeholder="general" className="input-field w-full" />
         </Field>
         <Field label="Source URL">
-          <input type="text" name="source_url" value={formData.source_url} onChange={handleChange} className="input-field" />
+          <input type="text" name="source_url" value={formData.source_url} onChange={handleChange} className="input-field w-full" />
         </Field>
         <Field label="Scraped At">
-          <input type="datetime-local" name="scraped_at" value={formData.scraped_at} onChange={handleChange} className="input-field" />
+          <input type="datetime-local" name="scraped_at" value={formData.scraped_at} onChange={handleChange} className="input-field w-full" />
         </Field>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary">{email ? 'Save Changes' : 'Add Email'}</button>
-        </div>
+        <FormActions onCancel={onCancel} submitLabel={email ? 'Save Changes' : 'Add Email'} />
       </form>
     </ModalShell>
   );
@@ -422,69 +364,66 @@ const FinancialForm = ({ financial, onSubmit, onCancel, error }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Ticker">
-            <input type="text" name="ticker" value={formData.ticker} onChange={handleChange} className="input-field" />
+            <input type="text" name="ticker" value={formData.ticker} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Exchange">
-            <input type="text" name="exchange" value={formData.exchange} onChange={handleChange} className="input-field" />
+            <input type="text" name="exchange" value={formData.exchange} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Currency">
-            <input type="text" name="currency" value={formData.currency} onChange={handleChange} placeholder="EUR" className="input-field" />
+            <input type="text" name="currency" value={formData.currency} onChange={handleChange} placeholder="EUR" className="input-field w-full" />
           </Field>
         </div>
 
         <Field label="Matched Name">
-          <input type="text" name="matched_name" value={formData.matched_name} onChange={handleChange} className="input-field" />
+          <input type="text" name="matched_name" value={formData.matched_name} onChange={handleChange} className="input-field w-full" />
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Market Cap">
-            <input type="number" step="0.01" name="market_cap" value={formData.market_cap} onChange={handleChange} className="input-field" />
+            <input type="number" step="0.01" name="market_cap" value={formData.market_cap} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Total Revenue">
-            <input type="number" step="0.01" name="total_revenue" value={formData.total_revenue} onChange={handleChange} className="input-field" />
+            <input type="number" step="0.01" name="total_revenue" value={formData.total_revenue} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Net Income">
-            <input type="number" step="0.01" name="net_income" value={formData.net_income} onChange={handleChange} className="input-field" />
+            <input type="number" step="0.01" name="net_income" value={formData.net_income} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Gross Profit">
-            <input type="number" step="0.01" name="gross_profit" value={formData.gross_profit} onChange={handleChange} className="input-field" />
+            <input type="number" step="0.01" name="gross_profit" value={formData.gross_profit} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Employees">
-            <input type="number" name="employees" value={formData.employees} onChange={handleChange} className="input-field" />
+            <input type="number" name="employees" value={formData.employees} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="As Of">
-            <input type="date" name="as_of" value={formData.as_of} onChange={handleChange} className="input-field" />
+            <input type="date" name="as_of" value={formData.as_of} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Sector">
-            <input type="text" name="sector" value={formData.sector} onChange={handleChange} className="input-field" />
+            <input type="text" name="sector" value={formData.sector} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Industry">
-            <input type="text" name="industry" value={formData.industry} onChange={handleChange} className="input-field" />
+            <input type="text" name="industry" value={formData.industry} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Match Confidence">
-            <input type="text" name="match_confidence" value={formData.match_confidence} onChange={handleChange} className="input-field" />
+            <input type="text" name="match_confidence" value={formData.match_confidence} onChange={handleChange} className="input-field w-full" />
           </Field>
           <Field label="Source">
-            <input type="text" name="source" value={formData.source} onChange={handleChange} className="input-field" />
+            <input type="text" name="source" value={formData.source} onChange={handleChange} className="input-field w-full" />
           </Field>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary">{financial ? 'Save Changes' : 'Add Financial Record'}</button>
-        </div>
+        <FormActions onCancel={onCancel} submitLabel={financial ? 'Save Changes' : 'Add Financial Record'} />
       </form>
     </ModalShell>
   );
@@ -493,7 +432,7 @@ const FinancialForm = ({ financial, onSubmit, onCancel, error }) => {
 /* --------------------------- Generic child list tab ------------------------- */
 
 const EmptyState = ({ label }) => (
-  <div className="py-12 text-center">
+  <div className="py-12 text-center px-4">
     <div className="mb-4 text-5xl text-primary-500/60">📄</div>
     <h3 className="mb-2 text-lg font-semibold text-foreground">No {label} yet</h3>
     <p className="text-muted">Add the first record to get started.</p>
@@ -503,7 +442,7 @@ const EmptyState = ({ label }) => (
 const ChildTableShell = ({ children }) => (
   <div className="glass-card overflow-hidden rounded-2xl border border-primary-500/10">
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">{children}</table>
+      <table className="w-full min-w-[640px] text-left text-sm">{children}</table>
     </div>
   </div>
 );
@@ -515,6 +454,20 @@ const RowActions = ({ onEdit, onDelete }) => (
     </button>
     <button type="button" onClick={onDelete} className="rounded-lg p-2 text-muted transition hover:bg-red-500/15 hover:text-red-600" title="Delete">
       <TrashIcon className="h-4 w-4" />
+    </button>
+  </div>
+);
+
+const TabHeader = ({ title, onAdd, addLabel }) => (
+  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+    <button
+      type="button"
+      onClick={onAdd}
+      className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+    >
+      <PlusIcon className="h-5 w-5" />
+      {addLabel}
     </button>
   </div>
 );
@@ -565,7 +518,7 @@ const ProspectsTab = ({ companyId, onMutate }) => {
 
   const handleDelete = async (item) => {
     setListError(null);
-    if (!window.confirm('Delete this prospect record? This cannot be undone.')) return;
+    if (!window.confirm('Delete this prospect? This cannot be undone.')) return;
     try {
       await prospectService.deleteProspect(item.id);
       load();
@@ -577,17 +530,11 @@ const ProspectsTab = ({ companyId, onMutate }) => {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Prospects</h3>
-        <button
-          type="button"
-          onClick={() => { setEditing(null); setFormError(null); setShowForm(true); }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add Prospect
-        </button>
-      </div>
+      <TabHeader
+        title="Prospects"
+        addLabel="Add Prospect"
+        onAdd={() => { setEditing(null); setFormError(null); setShowForm(true); }}
+      />
 
       {listError && (
         <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{listError}</div>
@@ -597,10 +544,7 @@ const ProspectsTab = ({ companyId, onMutate }) => {
         <div role="status" className="space-y-3 py-2">
           <span className="sr-only">Loading…</span>
           {Array.from({ length: 5 }, (_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3"
-            >
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-primary-500/10 px-4 py-3">
               <Skeleton className="h-4 w-1/4" />
               <Skeleton className="h-4 w-1/5" />
               <Skeleton className="h-4 w-1/6" />
@@ -616,9 +560,9 @@ const ProspectsTab = ({ companyId, onMutate }) => {
             <tr className="border-b border-primary-500/10 text-xs font-semibold uppercase tracking-wide text-muted">
               <th className="px-4 py-3">Sent By</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Contract Status</th>
-              <th className="px-4 py-3">Contract Value</th>
               <th className="px-4 py-3">Sent At</th>
+              <th className="px-4 py-3">Contract</th>
+              <th className="px-4 py-3">Value</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -626,12 +570,12 @@ const ProspectsTab = ({ companyId, onMutate }) => {
             {items.map((item) => (
               <tr key={item.id} className="border-b border-primary-500/5">
                 <td className="px-4 py-3 font-medium text-foreground">{item.sent_by || 'N/A'}</td>
-                <td className="px-4 py-3">
-                  {item.status ? <span className="chip bg-primary-500/15 text-primary-600 border-primary-500/25 capitalize">{item.status}</span> : <span className="text-muted">N/A</span>}
-                </td>
-                <td className="px-4 py-3 text-muted capitalize">{item.contract_status || 'N/A'}</td>
-                <td className="px-4 py-3 text-muted">{item.contract_value ? `${item.contract_value} ${item.contract_currency || ''}`.trim() : 'N/A'}</td>
+                <td className="px-4 py-3 text-muted capitalize">{item.status || 'N/A'}</td>
                 <td className="px-4 py-3 text-muted">{item.sent_at ? new Date(item.sent_at).toLocaleString() : 'N/A'}</td>
+                <td className="px-4 py-3 text-muted capitalize">{item.contract_status || 'N/A'}</td>
+                <td className="px-4 py-3 text-muted">
+                  {item.contract_value ? `${item.contract_value} ${item.contract_currency || ''}`.trim() : 'N/A'}
+                </td>
                 <td className="px-4 py-3">
                   <RowActions
                     onEdit={() => { setEditing(item); setFormError(null); setShowForm(true); }}
@@ -668,7 +612,7 @@ const EmailsTab = ({ companyId, onMutate }) => {
     try {
       setLoading(true);
       const response = await companyEmailService.getEmails({ company_id: companyId });
-      setItems(response.company_emails || []);
+      setItems(response.emails || response.company_emails || []);
     } catch (error) {
       console.error('Error loading emails:', error);
       setListError('Failed to load emails.');
@@ -702,7 +646,7 @@ const EmailsTab = ({ companyId, onMutate }) => {
 
   const handleDelete = async (item) => {
     setListError(null);
-    if (!window.confirm(`Delete email "${item.email}"? This cannot be undone.`)) return;
+    if (!window.confirm('Delete this email? This cannot be undone.')) return;
     try {
       await companyEmailService.deleteEmail(item.id);
       load();
@@ -714,17 +658,11 @@ const EmailsTab = ({ companyId, onMutate }) => {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Emails</h3>
-        <button
-          type="button"
-          onClick={() => { setEditing(null); setFormError(null); setShowForm(true); }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add Email
-        </button>
-      </div>
+      <TabHeader
+        title="Emails"
+        addLabel="Add Email"
+        onAdd={() => { setEditing(null); setFormError(null); setShowForm(true); }}
+      />
 
       {listError && (
         <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{listError}</div>
@@ -761,7 +699,7 @@ const EmailsTab = ({ companyId, onMutate }) => {
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-b border-primary-500/5">
-                <td className="px-4 py-3 font-medium text-foreground">{item.email}</td>
+                <td className="px-4 py-3 font-medium text-foreground break-all">{item.email}</td>
                 <td className="px-4 py-3 text-muted capitalize">{item.email_type || 'N/A'}</td>
                 <td className="px-4 py-3 text-muted">
                   {item.source_url ? (
@@ -853,17 +791,11 @@ const FinancialsTab = ({ companyId, onMutate }) => {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Financials</h3>
-        <button
-          type="button"
-          onClick={() => { setEditing(null); setFormError(null); setShowForm(true); }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add Record
-        </button>
-      </div>
+      <TabHeader
+        title="Financials"
+        addLabel="Add Record"
+        onAdd={() => { setEditing(null); setFormError(null); setShowForm(true); }}
+      />
 
       {listError && (
         <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-600">{listError}</div>
@@ -1011,7 +943,7 @@ const CrmCompanyDetail = () => {
   if (loading) {
     return (
       <div className="relative z-10 min-h-screen pb-16">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
           <div role="status" className="space-y-6">
             <span className="sr-only">Loading…</span>
             <Skeleton className="h-4 w-32" />
@@ -1024,7 +956,7 @@ const CrmCompanyDetail = () => {
               <Skeleton className="h-10 w-24 rounded-xl" />
               <Skeleton className="h-10 w-28 rounded-xl" />
             </div>
-            <div className="glass-card space-y-4 rounded-2xl border border-primary-500/10 p-6">
+            <div className="glass-card space-y-4 rounded-2xl border border-primary-500/10 p-4 sm:p-6">
               <SkeletonText lines={5} />
             </div>
           </div>
@@ -1036,7 +968,7 @@ const CrmCompanyDetail = () => {
   if (loadError || !company) {
     return (
       <div className="relative z-10 min-h-screen pb-16">
-        <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
           <button
             type="button"
             onClick={() => navigate('/crm')}
@@ -1055,32 +987,34 @@ const CrmCompanyDetail = () => {
 
   return (
     <div className="relative z-10 min-h-screen pb-16">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
         <button
           type="button"
           onClick={() => navigate('/crm')}
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground"
+          className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground"
         >
           <ArrowLeftIcon className="h-4 w-4" />
           Back to CRM
         </button>
 
-        <div className="glass-card mb-8 rounded-2xl border border-primary-500/10 p-6">
+        <div className="glass-card mb-6 sm:mb-8 rounded-2xl border border-primary-500/10 p-4 sm:p-6">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-4">
-                <CompanyAvatar name={company.company_name} className="h-14 w-14 text-lg" />
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-3xl font-semibold text-foreground">{company.company_name}</h1>
+              <div className="flex items-start gap-3 sm:gap-4 min-w-0 max-w-[calc(100%-4.5rem)] sm:max-w-none">
+                <CompanyAvatar name={company.company_name} className="h-12 w-12 sm:h-14 sm:w-14 text-lg shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h1 className="text-xl sm:text-3xl font-semibold text-foreground break-words">
+                      {company.company_name}
+                    </h1>
                     <StatusBadge status={company.status || 'new'} />
                   </div>
-                  <p className="mt-2 text-muted">
+                  <p className="mt-2 text-sm sm:text-base text-muted break-words">
                     {company.domain}
                     {[company.city, company.country].filter(Boolean).length > 0 &&
                       ` · ${[company.city, company.country].filter(Boolean).join(', ')}`}
                   </p>
-                  <div className="mt-3 max-w-xs">
+                  <div className="mt-3 w-full max-w-xs">
                     <StatusSelect
                       value={company.status || 'new'}
                       onChange={handleStatusChange}
@@ -1089,12 +1023,12 @@ const CrmCompanyDetail = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => { setEditError(null); setShowEditForm(true); }} className="btn-secondary flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <button type="button" onClick={() => { setEditError(null); setShowEditForm(true); }} className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto">
                   <PencilIcon className="h-4 w-4" />
                   Edit
                 </button>
-                <button type="button" onClick={handleDelete} className="inline-flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20">
+                <button type="button" onClick={handleDelete} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20 w-full sm:w-auto">
                   <TrashIcon className="h-4 w-4" />
                   Delete
                 </button>
@@ -1103,7 +1037,7 @@ const CrmCompanyDetail = () => {
 
             <PipelineStepper currentStatus={company.status || 'new'} />
 
-            <div className="flex flex-wrap gap-3 text-sm">
+            <div className="flex flex-wrap gap-2 sm:gap-3 text-sm">
               <span className="chip border border-primary-500/25 bg-primary-500/10">Emails: {company.emails_count ?? 0}</span>
               <span className="chip border border-primary-500/25 bg-primary-500/10">Prospects: {company.prospects_count ?? 0}</span>
               <span className="chip border border-primary-500/25 bg-primary-500/10">Financials: {company.financials_count ?? 0}</span>
@@ -1120,17 +1054,16 @@ const CrmCompanyDetail = () => {
 
         <OutreachPackPanel companyId={companyId} />
 
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-primary-500/10 pb-1">
+        <div className="mb-6 flex gap-2 border-b border-primary-500/10 pb-1 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-t-lg px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab.key
+              className={`rounded-t-lg px-3 sm:px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${activeTab === tab.key
                   ? 'border-b-2 border-primary-600 text-primary-600'
                   : 'text-muted hover:text-foreground'
-              }`}
+                }`}
             >
               {tab.label}
               {tab.key === 'prospects' && company.prospects_count != null && ` (${company.prospects_count})`}
@@ -1141,17 +1074,17 @@ const CrmCompanyDetail = () => {
         </div>
 
         {activeTab === 'info' && (
-          <div className="glass-card space-y-8 rounded-2xl border border-primary-500/10 p-6">
+          <div className="glass-card space-y-8 rounded-2xl border border-primary-500/10 p-4 sm:p-6">
             <section>
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Identité</h3>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">Domain</div>
-                  <div className="mt-1 text-foreground">{company.domain || 'N/A'}</div>
+                  <div className="mt-1 text-foreground break-words">{company.domain || 'N/A'}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">Website</div>
-                  <div className="mt-1 text-foreground">
+                  <div className="mt-1 text-foreground break-all">
                     {company.website ? (
                       <a href={company.website} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline">
                         {company.website}
@@ -1202,7 +1135,7 @@ const CrmCompanyDetail = () => {
             {company.notes && (
               <div className="rounded-xl bg-[var(--surface-muted)] p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">Notes</div>
-                <p className="mt-2 whitespace-pre-wrap text-foreground">{company.notes}</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-foreground">{company.notes}</p>
               </div>
             )}
           </div>

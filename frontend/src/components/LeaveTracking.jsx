@@ -87,18 +87,18 @@ const LeaveTracking = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pr-16 sm:pr-0">
           <div className="space-y-2">
             <Skeleton className="h-7 w-56" />
-            <Skeleton className="h-4 w-64" />
+            <Skeleton className="h-4 w-64 max-w-full" />
           </div>
-          <Skeleton className="h-10 w-36 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:w-36 rounded-lg" />
         </div>
         <div role="status" className="space-y-4">
           <span className="sr-only">Loading…</span>
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="glass-panel p-6 space-y-3">
+            <div key={i} className="glass-panel p-4 sm:p-6 space-y-3">
               <Skeleton className="h-5 w-40" />
               <SkeletonText lines={2} />
             </div>
@@ -109,15 +109,15 @@ const LeaveTracking = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">My Leave Requests</h1>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pr-16 sm:pr-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">My Leave Requests</h1>
           <p className="text-sm text-muted">Track and manage your leave requests</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-600"
+          className="flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-600 w-full sm:w-auto shrink-0"
         >
           <PlusIcon className="h-5 w-5" />
           Request Leave
@@ -132,7 +132,7 @@ const LeaveTracking = () => {
       )}
 
       {myRequests.length === 0 ? (
-        <div className="glass-panel p-12 text-center">
+        <div className="glass-panel p-8 sm:p-12 text-center">
           <CalendarIcon className="h-12 w-12 text-muted mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No Leave Requests</h3>
           <p className="text-sm text-muted mb-4">You haven't submitted any leave requests yet.</p>
@@ -147,32 +147,32 @@ const LeaveTracking = () => {
       ) : (
         <div className="space-y-4">
           {myRequests.map((request) => (
-            <div key={request.id} className="glass-panel p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-foreground capitalize">
+            <div key={request.id} className="glass-panel p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground capitalize">
                       {request.leave_type} Leave
                     </h3>
                     {getStatusBadge(request.status)}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted">
                     <span className="flex items-center gap-1">
-                      <CalendarIcon className="h-4 w-4" />
+                      <CalendarIcon className="h-4 w-4 shrink-0" />
                       {formatDate(request.start_date)} - {formatDate(request.end_date)}
                     </span>
                     <span>{calculateDays(request.start_date, request.end_date)} day(s)</span>
                   </div>
                 </div>
               </div>
-              
+
               {request.reason && (
-                <p className="text-sm text-muted mb-3">{request.reason}</p>
+                <p className="text-sm text-muted mb-3 break-words">{request.reason}</p>
               )}
 
               {request.status === 'rejected' && request.rejection_reason && (
                 <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-red-500 break-words">
                     <strong>Rejection Reason:</strong> {request.rejection_reason}
                   </p>
                 </div>

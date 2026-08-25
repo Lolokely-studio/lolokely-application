@@ -17,7 +17,6 @@ const LeaveCalendar = () => {
   }, []);
 
   useEffect(() => {
-    // Filter leave requests based on selected user
     if (selectedUserId) {
       setLeaveRequests(allLeaveRequests.filter(leave => leave.user_id === selectedUserId));
     } else {
@@ -65,50 +64,40 @@ const LeaveCalendar = () => {
 
   const getLeavesForDate = (date) => {
     return leaveRequests.filter(leave => {
-      // Normalize dates to compare only date part (no time, no timezone)
-      // Get date components in local timezone
       const dateYear = date.getFullYear();
       const dateMonth = date.getMonth();
       const dateDay = date.getDate();
-      
-      // Parse leave dates - they come as "YYYY-MM-DD" strings
+
       const startParts = leave.start_date.split('-');
       const endParts = leave.end_date.split('-');
       const startYear = parseInt(startParts[0], 10);
-      const startMonth = parseInt(startParts[1], 10) - 1; // Month is 0-indexed
+      const startMonth = parseInt(startParts[1], 10) - 1;
       const startDay = parseInt(startParts[2], 10);
       const endYear = parseInt(endParts[0], 10);
-      const endMonth = parseInt(endParts[1], 10) - 1; // Month is 0-indexed
+      const endMonth = parseInt(endParts[1], 10) - 1;
       const endDay = parseInt(endParts[2], 10);
-      
-      // Create date objects for comparison (in local timezone)
+
       const checkDate = new Date(dateYear, dateMonth, dateDay);
       const startDate = new Date(startYear, startMonth, startDay);
       const endDate = new Date(endYear, endMonth, endDay);
-      
-      // Compare dates (set time to midnight for accurate comparison)
+
       checkDate.setHours(0, 0, 0, 0);
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(0, 0, 0, 0);
-      
+
       return checkDate >= startDate && checkDate <= endDate;
     });
   };
 
   const calendarDays = useMemo(() => {
     const days = [];
-    
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
-    // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       days.push(date);
     }
-    
     return days;
   }, [year, month, startingDayOfWeek, daysInMonth]);
 
@@ -130,24 +119,34 @@ const LeaveCalendar = () => {
     return colors[leaveType] || colors.other;
   };
 
+  const getLeaveTypeDotColor = (leaveType) => {
+    const colors = {
+      vacation: 'bg-blue-500',
+      sick: 'bg-red-500',
+      personal: 'bg-purple-500',
+      other: 'bg-gray-500',
+    };
+    return colors[leaveType] || colors.other;
+  };
+
   if (loading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="p-3 sm:p-6 max-w-7xl mx-auto w-full">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pr-12 sm:pr-0">
           <div className="space-y-2">
             <Skeleton className="h-7 w-56" />
             <Skeleton className="h-4 w-72 max-w-full" />
           </div>
-          <Skeleton className="h-10 w-48 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />
         </div>
-        <div role="status" className="glass-panel p-6">
+        <div role="status" className="glass-panel p-3 sm:p-6">
           <span className="sr-only">Loading…</span>
           <div className="mb-6 flex items-center justify-between">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-10 w-10 rounded-lg" />
           </div>
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
             {Array.from({ length: 7 }, (_, i) => (
               <Skeleton key={`h-${i}`} className="h-6 w-full" />
             ))}
@@ -161,19 +160,19 @@ const LeaveCalendar = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Team Leave Calendar</h1>
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto w-full">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pr-12 sm:pr-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Team Leave Calendar</h1>
           <p className="text-sm text-muted">View all approved leave requests for the team</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted" />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-0">
+            <Filter className="h-4 w-4 text-muted shrink-0" />
             <select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="input-field min-w-[200px]"
+              className="input-field w-full sm:min-w-[200px]"
             >
               <option value="">All Team Members</option>
               {users.map((user) => (
@@ -186,7 +185,7 @@ const LeaveCalendar = () => {
           {selectedUserId && (
             <button
               onClick={() => setSelectedUserId('')}
-              className="flex items-center justify-center h-10 w-10 rounded-lg transition hover:bg-primary-500/10"
+              className="flex items-center justify-center h-10 w-10 rounded-lg transition hover:bg-primary-500/10 shrink-0"
               title="Clear filter"
             >
               <X className="h-4 w-4 text-muted" />
@@ -195,16 +194,16 @@ const LeaveCalendar = () => {
         </div>
       </div>
 
-      <div className="glass-panel p-6">
+      <div className="glass-panel p-3 sm:p-6">
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <button
             onClick={previousMonth}
             className="flex items-center justify-center h-10 w-10 rounded-lg transition hover:bg-primary-500/10"
           >
             <ChevronLeft className="h-5 w-5 text-foreground" />
           </button>
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="text-base sm:text-xl font-semibold text-foreground">
             {monthNames[month]} {year}
           </h2>
           <button
@@ -216,18 +215,17 @@ const LeaveCalendar = () => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2">
-          {/* Day Headers */}
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
           {dayNames.map((day) => (
             <div
               key={day}
-              className="text-center text-sm font-semibold text-muted py-2"
+              className="text-center text-[10px] sm:text-sm font-semibold text-muted py-1 sm:py-2"
             >
-              {day}
+              <span className="sm:hidden">{day.charAt(0)}</span>
+              <span className="hidden sm:inline">{day}</span>
             </div>
           ))}
 
-          {/* Calendar Days */}
           {calendarDays.map((date, index) => {
             if (!date) {
               return <div key={`empty-${index}`} className="aspect-square" />;
@@ -236,22 +234,21 @@ const LeaveCalendar = () => {
             const dayLeaves = getLeavesForDate(date);
             const isToday = date.toDateString() === new Date().toDateString();
             const isCurrentMonth = date.getMonth() === month;
+            const mobileLeaveTypes = [...new Set(dayLeaves.map((leave) => leave.leave_type))];
 
             return (
               <div
                 key={date.toISOString()}
-                className={`aspect-square p-1 border rounded-lg transition ${
-                  isToday
-                    ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-surface-card-border'
-                } ${
-                  !isCurrentMonth ? 'opacity-40' : ''
-                }`}
+                className={`aspect-square p-0.5 sm:p-1 border rounded-lg transition overflow-hidden ${isToday
+                  ? 'border-primary-500 bg-primary-500/10'
+                  : 'border-surface-card-border'
+                  } ${!isCurrentMonth ? 'opacity-40' : ''
+                  }`}
               >
-                <div className="text-xs font-medium text-foreground mb-1">
+                <div className="text-[10px] sm:text-xs font-medium text-foreground mb-0.5 sm:mb-1">
                   {date.getDate()}
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 hidden sm:block">
                   {dayLeaves.slice(0, 2).map((leave) => (
                     <div
                       key={leave.id}
@@ -267,15 +264,26 @@ const LeaveCalendar = () => {
                     </div>
                   )}
                 </div>
+                {mobileLeaveTypes.length > 0 && (
+                  <div className="sm:hidden flex justify-center gap-0.5 flex-wrap">
+                    {mobileLeaveTypes.slice(0, 3).map((type) => (
+                      <span
+                        key={type}
+                        className={`h-1.5 w-1.5 rounded-full ${getLeaveTypeDotColor(type)}`}
+                        title={type}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
         {/* Legend */}
-        <div className="mt-6 pt-6 border-t divider-soft">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t divider-soft">
           <h3 className="text-sm font-semibold text-foreground mb-3">Legend</h3>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded border bg-blue-500/20 border-blue-500/30"></div>
               <span className="text-sm text-muted">Vacation</span>
@@ -296,7 +304,7 @@ const LeaveCalendar = () => {
         </div>
 
         {/* Leave List */}
-        <div className="mt-6 pt-6 border-t divider-soft">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t divider-soft">
           <h3 className="text-sm font-semibold text-foreground mb-3">
             {selectedUserId ? 'Filtered ' : ''}Upcoming Leaves
           </h3>
@@ -308,12 +316,12 @@ const LeaveCalendar = () => {
               .map((leave) => (
                 <div
                   key={leave.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-primary-500/5"
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-2 rounded-lg bg-primary-500/5"
                 >
-                  <div className="flex items-center gap-3">
-                    <CalendarIcon className="h-4 w-4 text-muted" />
-                    <div>
-                      <div className="text-sm font-medium text-foreground">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CalendarIcon className="h-4 w-4 text-muted shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">
                         {leave.user_name}
                       </div>
                       <div className="text-xs text-muted">
@@ -321,7 +329,7 @@ const LeaveCalendar = () => {
                       </div>
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded capitalize ${getLeaveTypeColor(leave.leave_type)}`}>
+                  <span className={`text-xs px-2 py-1 rounded capitalize w-fit shrink-0 ${getLeaveTypeColor(leave.leave_type)}`}>
                     {leave.leave_type}
                   </span>
                 </div>

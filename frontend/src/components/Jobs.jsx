@@ -121,8 +121,8 @@ const Jobs = () => {
   if (loading) {
     return (
       <div className="relative z-10 min-h-screen pb-16">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-8 space-y-3">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mb-8 space-y-3 pr-16 sm:pr-0">
             <Skeleton className="h-9 w-40" />
             <Skeleton className="h-4 w-72 max-w-full" />
           </div>
@@ -132,7 +132,7 @@ const Jobs = () => {
             {Array.from({ length: 5 }, (_, i) => (
               <div
                 key={i}
-                className="glass-card rounded-2xl border border-primary-500/10 p-6"
+                className="glass-card rounded-2xl border border-primary-500/10 p-4 sm:p-6"
               >
                 <div className="flex items-start gap-3">
                   <SkeletonCircle size="md" className="rounded-lg" />
@@ -151,12 +151,12 @@ const Jobs = () => {
 
   return (
     <div className="relative z-10 min-h-screen pb-16">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 sm:mb-8 pr-16 sm:pr-0">
+          <h1 className="text-xl sm:text-3xl font-semibold text-foreground">
             Jobs
           </h1>
-          <p className="mt-2 text-muted">
+          <p className="mt-2 text-sm sm:text-base text-muted">
             Browse available job opportunities.
           </p>
         </div>
@@ -171,7 +171,7 @@ const Jobs = () => {
               placeholder="Search jobs by title, company, location, or skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field !pl-11 !pr-12 !py-3 text-sm"
+              className="input-field !pl-11 !pr-12 !py-3 text-sm w-full"
             />
             {searchQuery && (
               <button
@@ -200,7 +200,7 @@ const Jobs = () => {
           )}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {filteredJobs.length === 0 ? (
             <div className="py-12 text-center">
               <div className="mb-4 text-6xl text-primary-500/60">
@@ -227,27 +227,27 @@ const Jobs = () => {
               {paginatedJobs.map((job) => (
                 <div
                   key={job.id}
-                  className="glass-card rounded-2xl border border-primary-500/10 p-6 transition-all duration-200 hover:border-primary-500/20 hover:shadow-lg"
+                  className="glass-card rounded-2xl border border-primary-500/10 p-4 sm:p-6 transition-all duration-200 hover:border-primary-500/20 hover:shadow-lg"
                 >
                   <div className="flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-3 mb-2">
                           {job.company_logo && (
                             <img
                               src={job.company_logo}
                               alt={job.company_name || 'Company logo'}
-                              className="h-12 w-12 rounded-lg object-cover"
+                              className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover shrink-0"
                             />
                           )}
-                          <div>
-                            <h3 
+                          <div className="min-w-0">
+                            <h3
                               onClick={() => handleJobClick(job)}
-                              className="text-xl font-semibold text-foreground cursor-pointer hover:text-primary-600 transition-colors duration-200"
+                              className="text-base sm:text-xl font-semibold text-foreground cursor-pointer hover:text-primary-600 transition-colors duration-200 break-words"
                             >
                               {job.title || 'Untitled Job'}
                             </h3>
-                            <p className="text-sm text-muted">
+                            <p className="text-sm text-muted break-words">
                               {job.company_name || 'Company'}
                               {job.location && ` • ${job.location}`}
                               {job.remote && ' • Remote'}
@@ -260,7 +260,7 @@ const Jobs = () => {
                           href={job.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn-primary whitespace-nowrap text-sm"
+                          className="btn-primary whitespace-nowrap text-sm w-full sm:w-auto text-center shrink-0"
                         >
                           View Job
                         </a>
@@ -268,12 +268,12 @@ const Jobs = () => {
                     </div>
 
                     {job.description && (
-                      <p className="text-sm text-muted line-clamp-3">
+                      <p className="text-sm text-muted line-clamp-3 break-words">
                         {job.description}
                       </p>
                     )}
 
-                    <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                       {job.budget_min && job.budget_max && (
                         <div className="flex items-center gap-1">
                           <span className="font-semibold text-foreground">Budget:</span>
@@ -339,15 +339,14 @@ const Jobs = () => {
             <div className="text-sm text-muted">
               Page {currentPage} of {totalPages}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handlePrevious}
                 disabled={currentPage === 1}
-                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                  currentPage > 1
+                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${currentPage > 1
                     ? 'border-primary-500/25 bg-primary-500/15 text-foreground hover:bg-primary-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400'
                     : 'border-primary-500/10 bg-primary-500/5 text-muted cursor-not-allowed opacity-50'
-                }`}
+                  }`}
               >
                 <ChevronLeftIcon className="h-4 w-4" />
                 Previous
@@ -356,11 +355,10 @@ const Jobs = () => {
               <button
                 onClick={handleNext}
                 disabled={currentPage === totalPages}
-                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                  currentPage < totalPages
+                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${currentPage < totalPages
                     ? 'border-primary-500/25 bg-primary-500/15 text-foreground hover:bg-primary-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400'
                     : 'border-primary-500/10 bg-primary-500/5 text-muted cursor-not-allowed opacity-50'
-                }`}
+                  }`}
               >
                 Next
                 <ChevronRightIcon className="h-4 w-4" />
@@ -373,18 +371,18 @@ const Jobs = () => {
       {/* Job Details Modal */}
       {selectedJob && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-3 sm:p-4"
           onClick={handleBackdropClick}
         >
           <div
-            className="glass-panel mx-4 w-full max-w-3xl max-h-[90vh] overflow-y-auto px-6 py-6 sm:px-8"
+            className="glass-panel mx-0 sm:mx-4 w-full max-w-3xl max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-foreground">Job Details</h2>
+            <div className="mb-6 flex items-start justify-between gap-3">
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Job Details</h2>
               <button
                 onClick={handleCloseModal}
-                className="text-muted transition hover:text-foreground"
+                className="text-muted transition hover:text-foreground shrink-0"
                 aria-label="Close modal"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -393,26 +391,26 @@ const Jobs = () => {
 
             <div className="space-y-6">
               {/* Header Section */}
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 {selectedJob.company_logo && (
                   <img
                     src={selectedJob.company_logo}
                     alt={selectedJob.company_name || 'Company logo'}
-                    className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                    className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg object-cover flex-shrink-0"
                   />
                 )}
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-foreground mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-2xl font-bold text-foreground mb-2 break-words">
                     {selectedJob.title || 'Untitled Job'}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
                     {selectedJob.company_name && (
                       <span className="font-medium text-foreground">{selectedJob.company_name}</span>
                     )}
                     {selectedJob.location && <span>• {selectedJob.location}</span>}
                     {selectedJob.remote && <span>• Remote</span>}
                     {selectedJob.source && (
-                      <span className="ml-auto capitalize">Source: {selectedJob.source}</span>
+                      <span className="sm:ml-auto capitalize">Source: {selectedJob.source}</span>
                     )}
                   </div>
                 </div>
@@ -421,9 +419,9 @@ const Jobs = () => {
               {/* Description Section */}
               {selectedJob.description && (
                 <div>
-                  <h4 className="text-lg font-semibold text-foreground mb-3">Description</h4>
+                  <h4 className="text-base sm:text-lg font-semibold text-foreground mb-3">Description</h4>
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-muted whitespace-pre-wrap leading-relaxed">
+                    <p className="text-muted whitespace-pre-wrap leading-relaxed break-words">
                       {selectedJob.description}
                     </p>
                   </div>
@@ -431,7 +429,7 @@ const Jobs = () => {
               )}
 
               {/* Job Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {selectedJob.job_type && (
                   <div className="glass-card rounded-xl border border-primary-500/10 p-4">
                     <div className="text-sm font-semibold text-foreground mb-1">Job Type</div>
@@ -475,7 +473,7 @@ const Jobs = () => {
               {/* Skills Section */}
               {selectedJob.skills && selectedJob.skills.length > 0 && (
                 <div>
-                  <h4 className="text-lg font-semibold text-foreground mb-3">Required Skills</h4>
+                  <h4 className="text-base sm:text-lg font-semibold text-foreground mb-3">Required Skills</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedJob.skills.map((skill, index) => (
                       <span
@@ -517,4 +515,3 @@ const Jobs = () => {
 };
 
 export default Jobs;
-

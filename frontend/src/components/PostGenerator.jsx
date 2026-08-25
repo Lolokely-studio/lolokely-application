@@ -83,7 +83,7 @@ const PostGenerator = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       await postService.savePost({
         ...formData,
         generated_variations: variations,
@@ -96,7 +96,6 @@ const PostGenerator = () => {
       });
 
       setSuccess('Post saved successfully!');
-      // Reset form after a delay
       setTimeout(() => {
         setFormData({
           theme: '',
@@ -149,22 +148,22 @@ const PostGenerator = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen w-full overflow-hidden">
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+    <div className="flex flex-col min-h-screen w-full lg:h-full lg:overflow-hidden">
+      <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:overflow-hidden lg:min-h-0">
         <header className="flex-shrink-0 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pr-14 sm:pr-16 lg:pr-24">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-foreground flex items-center gap-2 sm:gap-3">
-                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600 shrink-0" />
-                Social Media Post Generator
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pr-12 sm:pr-16 lg:pr-24">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-semibold text-foreground flex items-start sm:items-center gap-2 sm:gap-3">
+                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600 shrink-0 mt-0.5 sm:mt-0" />
+                <span className="break-words">Social Media Post Generator</span>
               </h1>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-sm text-muted pr-2">
                 Generate engaging social media posts for Gaming, 3D, Design, AR/VR, and more.
               </p>
             </div>
             <Link
               to="/posts/history"
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-primary-500/25 bg-primary-500/10 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 hover:border-primary-500/50 w-fit"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-primary-500/25 bg-primary-500/10 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-primary-500/25 hover:border-primary-500/50 w-fit shrink-0"
             >
               <History className="h-4 w-4" />
               View History
@@ -184,12 +183,12 @@ const PostGenerator = () => {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 lg:min-h-0 lg:overflow-hidden">
           {/* Form Section */}
-          <div className="flex flex-col min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
+          <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
               <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Post Details</h2>
-              
+
               <form onSubmit={handleGenerate} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground">
@@ -220,7 +219,7 @@ const PostGenerator = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-foreground">
                       Platform <span className="text-red-500">*</span>
@@ -256,7 +255,7 @@ const PostGenerator = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-foreground">
                       Language
@@ -288,7 +287,7 @@ const PostGenerator = () => {
                   </div>
                 </div>
 
-                {/* Media Upload — before generate so image can enrich AI copy */}
+                {/* Media Upload */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground">
                     Media (optional)
@@ -319,10 +318,10 @@ const PostGenerator = () => {
                   ) : (
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary-500/25 bg-primary-500/5 p-6 transition hover:bg-primary-500/10">
                       <Image className="mb-2 h-10 w-10 text-primary-500" />
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground text-center">
                         Click to upload image or video
                       </span>
-                      <span className="mt-1 text-xs text-muted">
+                      <span className="mt-1 text-xs text-muted text-center">
                         Image is analyzed to improve post copy. Video is saved only.
                       </span>
                       <input
@@ -358,7 +357,7 @@ const PostGenerator = () => {
           </div>
 
           {/* Results Section */}
-          <div className="flex flex-col min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
+          <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto space-y-4 sm:space-y-6">
             {variations.length > 0 ? (
               <>
                 <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
@@ -371,33 +370,31 @@ const PostGenerator = () => {
                       {imageAnalysis ? ' · image context used' : ''}
                     </p>
                   )}
-                  
+
                   <div className="space-y-4">
                     {variations.map((variation, index) => (
                       <div
                         key={index}
                         onClick={() => setSelectedVariation(variation)}
-                        className={`cursor-pointer rounded-xl border p-4 transition ${
-                          selectedVariation === variation
-                            ? 'border-primary-500 bg-primary-500/10'
-                            : 'border-primary-500/25 bg-card hover:border-primary-500/50'
-                        }`}
+                        className={`cursor-pointer rounded-xl border p-4 transition ${selectedVariation === variation
+                          ? 'border-primary-500 bg-primary-500/10'
+                          : 'border-primary-500/25 bg-card hover:border-primary-500/50'
+                          }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${
-                            selectedVariation === variation
-                              ? 'border-primary-500 bg-primary-500'
-                              : 'border-primary-500/25'
-                          }`}>
+                          <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${selectedVariation === variation
+                            ? 'border-primary-500 bg-primary-500'
+                            : 'border-primary-500/25'
+                            }`}>
                             {selectedVariation === variation && (
                               <Check className="h-4 w-4 text-white" />
                             )}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground mb-1">
                               Variation {index + 1}
                             </p>
-                            <p className="text-sm text-muted whitespace-pre-wrap">
+                            <p className="text-sm text-muted whitespace-pre-wrap break-words">
                               {variation}
                             </p>
                           </div>
@@ -411,7 +408,7 @@ const PostGenerator = () => {
                 {selectedVariation && (
                   <div className="rounded-2xl border border-primary-500/25 bg-card p-4 sm:p-6 shrink-0">
                     <h2 className="mb-4 text-lg sm:text-xl font-semibold text-foreground">Post Preview</h2>
-                    
+
                     <div className="mb-4 rounded-xl border border-primary-500/25 bg-background p-4">
                       {mediaPreview && (
                         <div className="mb-4">
@@ -430,12 +427,12 @@ const PostGenerator = () => {
                           )}
                         </div>
                       )}
-                      <p className="whitespace-pre-wrap text-sm text-foreground">
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
                         {selectedVariation}
                       </p>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         onClick={handleCopy}
                         className="btn-primary flex-1 flex items-center justify-center gap-2"
@@ -459,7 +456,7 @@ const PostGenerator = () => {
                 )}
               </>
             ) : (
-              <div className="flex-1 min-h-[280px] flex flex-col items-center justify-center rounded-2xl border border-primary-500/25 bg-card p-8 sm:p-12 text-center">
+              <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center rounded-2xl border border-primary-500/25 bg-card p-8 sm:p-12 text-center">
                 <Sparkles className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 text-primary-500/60" />
                 <h3 className="mb-2 text-base sm:text-lg font-semibold text-foreground">
                   Ready to Generate
@@ -477,4 +474,3 @@ const PostGenerator = () => {
 };
 
 export default PostGenerator;
-
